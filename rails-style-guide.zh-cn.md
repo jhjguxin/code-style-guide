@@ -328,4 +328,66 @@
     array.delete(e)
     ```
 
-* 在单行代码块的时候宁愿使用`{...}`超过`do...end`。避免在多行代码块使用`{...}`多行
+* 在单行代码块的时候宁愿使用`{...}`而不是`do...end`。避免在多行代码块使用`{...}`(多行链式通常变得非常丑陋)。通常使用`do...end`来做`流程控制`和`方法定义`(例如 在Rakefiles和某些DSLs中)。避免在链式调用中使用`do...end`。
+
+    ```Ruby
+    names = ["Bozhidar", "Steve", "Sarah"]
+
+    #good
+    names.each { |name| puts name }
+
+    #bad
+    names.each do |name|
+      puts name
+    end
+
+    # good
+    names.select { |name| name.start_with?("S") }.map { |name| name.upcase }
+
+    # bad
+    names.select do |name|
+      name.start_with?("S")
+    end.map { |name| name.upcase }
+    ```
+
+    有人会争论多行链式看起来和使用`{...}`一样工作，但是他们问问自己 - 这样的代码真的有可读性码并且为什么代码块中的内容不能被提取到美丽的methods。
+
+* 避免在不需要的地方使用`return`
+
+    ```Ruby
+    # bad
+    def some_method(some_arr)
+      return some_arr.size
+    end
+
+    # good
+    def some_method(some_arr)
+      some_arr.size
+    end
+    ```
+
+* 当分配默认值给方法参数的时候，在`=`附近使用空格。
+
+    ```Ruby
+    # bad
+    def some_method(arg1=:default, arg2=nil, arg3=[])
+      # do something...
+    end
+
+    # good
+    def some_method(arg1 = :default, arg2 = nil, arg3 = [])
+      # do something...
+    end
+    ```
+
+* 避免在不需要的时候使用行连接符(`\\`)。实际上应该避免行连接符。
+
+    ```Ruby
+    # bad
+    result = 1 - \
+             2
+
+    # good (but still ugly as hell)仍然像地狱一样丑陋
+    result = 1 \
+             - 2
+    ```
