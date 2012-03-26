@@ -380,4 +380,14 @@
     end
     ```
 
-* 
+* 避免在不需要的时候使用行连接符(`\\`)。实际上应该避免行连接符。
+
+    ```Ruby
+    # bad
+    result = 1 - \
+             2
+
+    # good (but still ugly as hell)仍然像地狱一样丑陋
+    result = 1 \
+             - 2
+    ```

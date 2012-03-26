@@ -391,3 +391,145 @@
     result = 1 \
              - 2
     ```
+* 使用`=`返回一个表达式的值是很好的，但是需要用括号把赋值运算式括起来。
+
+    ```Ruby
+    # good - show intented use of assignment
+    if (v = array.grep(/foo/)) ...
+
+    # bad
+    if v = array.grep(/foo/) ...
+
+    # also good - show intended use of assignment and has correct precedence.
+    if (v = self.next_value) == "hello" ...
+    ```
+
+* 使用`||=`轻松的初始化变量。
+
+    ```Ruby
+    # set name to Vozhidar, only if it's nil or false
+    name ||= 'Bozhidar'
+    ````
+
+* 不要使用`||=`来初始化布尔变量。（思考一些如果当前值为`false`的时候会发生什么。）
+
+    ```Ruby
+    # bad - would set enabled to true even if it was false
+    enable ||= true
+
+    # good
+    enabled = true if enabled.nil?
+    ```
+
+* 避免使用Perl的指定变量风格（比如，`$0-9`，`$`，等等。）。它们相当神秘，不鼓励在单行代码之外使用它们。
+
+* 从来不要在方法名和（参数）开括号之间使用空格。
+
+    ```Ruby
+    # bad
+    f (3+2) + 1
+
+    # good
+    f(3 + 2) +1
+    ```
+
+* 如果方法的第一个参数以开括号开始，通常使用括号把它们全部括起来。例如`f((3 + 2) + 1)`。
+
+* 通常使用-w 选项运行Ruby解释器，在你忘记上面所诉规则，ruby将会提示你。
+
+* 当你的hash字典是symbols的时候，使用Ruby 1.9的字面量语法。
+
+    ```Ruby
+    # bad
+    hash = { :one => 1, :two => 2 }
+
+    #good
+    hash = { one: 1, two: 2 }
+    ```
+
+* 使用新的 lambda 语法。
+
+    ```Ruby
+    # bad
+    lambda = lambda { |a, b| a + b }
+    lambda.call(1, 2)
+
+    # good
+    lambda = ->(a, b) { a + b }
+    lambda.(1, 2)
+    ```
+
+* 对不使用的块变量使用`_`。
+
+    ```Ruby
+    # bad
+    result = hash.map { |k, v| v + 1}
+
+    # good
+    result = hash.map { |_, v| v + 1 }
+    ```
+
+### 命名
+
+> The only real difficulties in programming are cache invalidation and
+> naming things. <br/>
+> -- Phil Karlton
+> 程序（运行）中唯一不一样的是无效的缓存和命名的事物（变量）。<br/>
+> -- Phil Karlton
+
+* 使用`snake_case`的形式给变量和方法命名。
+* Snake case: punctuation is removed and spaces are replaced by single underscores. Normally the letters share the same case (either UPPER_CASE_EMBEDDED_UNDERSCORE or lower_case_embedded_underscore) but the case can be mixed
+* 使用`CamelCase(駝峰式大小寫)`的形式给类和模块命名。(保持使用缩略首字母大写的方式如HTTP,
+  RFC, XML)
+* 使用`SCREAMING_SNAKE_CASE`给常量命名。
+* 在表示断言的方法名（方法返回真或者假）的末尾添加一个问号（如Array#empty?）。
+* 可能会造成潜在“危险”的方法名（如修改self或者在原处修改变量的方法，exit!等）应该在末尾添加一个感叹号。
+* 当在短的块中使用`reduce`时，命名参数`|a, e|` (accumulator, element)。
+
+    ```Ruby
+    #Combines all elements of enum枚举 by applying a binary operation, specified by a block or a symbol that names a method or operator.
+    # Sum some numbers
+    (5..10).reduce(:+)                            #=> 45#reduce
+    # Same using a block and inject
+    (5..10).inject {|sum, n| sum + n }            #=> 45 #inject注入
+    # Multiply some numbers
+    (5..10).reduce(1, :*)                         #=> 151200
+    # Same using a block
+    (5..10).inject(1) {|product, n| product * n } #=> 151200
+    ```
+
+* 在定义二元操作符方法时，将其的参数取名为other。
+
+    ```Ruby
+    def +(other)
+      # body omitted
+    end
+    ```
+* `map`优先于`collect`，`find`优先于`detect`，`select`优先于`find_all`，`reduce`优先于`inject`，`size`优先于`length`。以上的规则并不绝定，如果使用后者能提高代码的可读性，那么尽管使用它们。这些对应的方法名（如collect，detect，inject）继承于SmallTalk语言，它们在其它语言中并不是很通用。鼓励使用select而不是find_all是因为select与reject一同使用时很不错，并且它的名字具有很好的自解释性。
+
+## 注释
+
+> Good code is its own best documentation. As you're about to add a
+> comment, ask yourself, "How can I improve the code so that this
+> comment isn't needed?" Improve the code and then document it to make
+> it even clearer. <br/>
+> -- Steve McConnell
+> 好的代码在于它有好的文档。当你打算添加一个注释，问问自己，“我该做的是怎样提高代码质量，那么这个注释是不是不需要了？”提高代码并且给他们添加文档使得它更加简洁。<br/>
+> -- Steve McConnell
+
+* 写出自解释文档代码，然后忽略不工作的这部分。这不是说着玩。
+* 注释长于一个单词则以大写开始并使用标点。使用一个空格将注释与符号隔开。Use [one
+  space](http://en.wikipedia.org/wiki/Sentence_spacing) after periods.
+* 避免多余的注释。
+
+    ```Ruby
+    # bad
+    counter += 1 # increments counter by one
+    ```
+
+* 随时更新注释，没有注释比过期的注释更好。
+* 不要为糟糕的代码写注释。重构它们，使它们能够“自解释”。(Do or do not - there is no try.)
+
+## 注解
+
+
