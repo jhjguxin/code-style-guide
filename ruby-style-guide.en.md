@@ -706,7 +706,7 @@ mutators.
         @last_name = last_name
       end
     end
-    ```  
+    ```
   
 * Consider adding factory methods to provide additional sensible ways
 to create instances of a particular class.
@@ -896,7 +896,7 @@ in *Ruby* now, not in *Python*.
     rescue Exception => e
       # some handling
     end
-    ```  
+    ```
 
 * Release external resources obtained by your program in an ensure
 block.
