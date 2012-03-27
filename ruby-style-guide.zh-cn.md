@@ -683,5 +683,310 @@
 
     正如上例看到的, 所有的子类共享类变量, 并且可以直接修改类变量,此时使用类实例变量是更好的主意.
 
+* 根据方法的用途为他们分配合适的可见度( `private`, `protected` )，不要让所有的方法都是 `public` (这是默认设定)。这是 *Ruby* 不是 *Python*。
+* `public`, `protected`, 和 `private` 等可见性关键字应该和其（指定）的方法具有相同的缩进。并且不同的可见性关键字之间留一个空格。
+
+    ```Ruby
+    class SomeClass
+      def public_method
+        # ...
+      end
+
+      private
+      def private_method
+        # ...
+      end
+    end
+    ```
+
+* 使用self来定义单例方法. 当代码重构时, 这将使得方法定义代码更加具有灵活性.
+
+    ```Ruby
+    class TestClass
+      # bad
+      def TestClass.some_method
+        # body omitted
+      end
+
+      # good
+      def self.some_other_method
+        # body ommited
+      end
+
+      # 也可以这样方便的定义多个单例方法。
+      class << self
+        def first_method
+          # body omitted
+        end
+
+        def second_method_etc
+          # body omitted
+        end
+      end
+    end
+    ```
+    ```shell
+    class SingletonTest
+      def size
+        25
+      end
+    end
+
+    test1 = SingletonTest.new
+    test2 = SingletonTest.new
+    def test2.size
+      10
+    end
+    test1.size # => 25
+    test2.size # => 10
+    ```
+    本例中，test1 與 test2 屬於同一類別，但 test2 具有重新定義的 size 方法，因此兩者的行為會不一樣。只給予單一物件的方法稱為单例方法 (singleton method)。
+
+## 异常处理
+
+* 不要抑制异常输出。
+
+    ```Ruby
+    begin
+      # an exception occurs here
+    rescue SomeError
+      # the rescue clause does absolutely nothing还没有补救代码
+    end
+    ```
+
+* 不要用异常来控制流。
+
+    ```Ruby
+    # bad
+    begin
+      n / d
+    rescue ZeroDivisionError
+      puts "Cannot divide by 0!"
+    end
+
+    # good
+    if n.zero?
+      puts "Cannot divide by 0!"
+    else
+      n / d
+    ```
+
+* 应该总是避免拦截(最顶级的)Exception异常类.
+
+    ```Ruby
+    # bad 
+    begin
+      # an exception occurs here
+    rescue
+      # exception handling
+    end
+
+    # still bad
+    begin
+      # an exception occurs here
+    rescue Exception
+      # exception handling
+    end
+    ```
+
+* 将更具体的异常放在拦截链的上方，否则他们将不会被捕获。
+
+    ```Ruby
+    # bad
+    begin
+      # some code
+    rescue Exception => e
+      # some handling
+    rescue StandardError => e
+      # some handling
+    end
+
+    # good
+    begin
+      # some code
+    rescue StandardError => e
+      # some handling
+    rescue Exception => e
+      # some handling
+    end
+    ```
+
+* 使用ensure语句, 来确保总是执行一些特地的操作.
+
+    ```Ruby
+    f = File.open("testfile")
+    begin
+      # .. process
+    rescue
+      # .. handle error
+    ensure
+      f.close unless f.nil?
+    end
+    ```
+
+* 除非必要, 尽可能使用Ruby标准库中异常类，而不是引入一个新的异常类。(而不是派生自己的异常类)
+
+## 集合
+
+* 总是使用%w的方式来定义字符串数组.(译者注: w表示英文单词word, 而且定义之间千万不能有逗号)
+
+    ```Ruby
+    # bad
+    STATES = ['draft', 'open', 'closed']
+
+    # good
+    STATES = %w(draft open closed)
+    ```
+
+* 避免直接引用靠后的数组元素, 这样隐式的之前的元素都被赋值为nil.
+
+    ```Ruby
+    arr = []
+    arr[100] = 1 # now you have an array with lots of nils
+    ```
+
+* 如果要确保元素唯一, 则使用 `Set` 代替 `Array` .`Set` 更适合于无顺序的, 并且元素唯一的集合, 集合具有类似于数组一致性操作以及哈希的快速查找.
+
+* 尽可能使用符号代替字符串作为哈希键.
+
+    ```Ruby
+    # bad
+    hash = { 'one' => 1, 'two' => 2, 'three' => 3 }
+
+    # good
+    hash = { one: 1, two: 2, three: 3 }
+    ```
+
+* 避免使用易变对象作为哈希键。
+* 优先使用1.9的新哈希语法。
+
+    ```Ruby
+    # bad
+    hash = { :one => 1, :two => 2, :three => 3 }
+
+    # good
+    hash = { one: 1, two: 2, three: 3 }
+    ```
+
+* 记住, 在Ruby1.9中, 哈希的表现不再是无序的. (译者注: Ruby1.9将会记住元素插入的序列)
+* 当遍历一个集合的同时, 不要修改这个集合。
+
+## 字符串
+
+* 优先使用 `字符串插值` 来代替 `字符串串联`。
+
+    ```Ruby
+    # bad
+    email_with_name = user.name + ' <' + user.email + '>'
+
+    # good
+    email_with_name = "#{user.name} <#{user.email}>"
+    ```
+
+* 当不需要使用 `字符串插值` 或某些特殊字符时, 应该优先使用单引号.
+
+    ```Ruby
+    # bad
+    name = "Bozhidar"
+
+    # good
+    name = 'Bozhidar'
+    ```
+
+* 当使用字符串插值替换 `实例变量` 时, 应该省略{}.
+
+    ```Ruby
+    class Person
+      attr_reader :first_name, :last_name
+
+      def initialize(first_name, last_name)
+        @first_name = first_name
+        @last_name = last_name
+      end
+
+      # bad
+      def to_s
+        "#{@first_name} #{@last_name}"
+      end
+
+      # good
+      def to_s
+        "#@first_name #@last_name"
+      end
+    end
+    ```
+
+* 操作较大的字符串时, 避免使用 `String#+` , 如果需要修改被操作字符串, 应该总是使用 `String#<<` 作为代替。就地并列字符串实例变体比 `String#+` 更快，它创建了多个字符串对象。
+
+    ```Ruby
+    # good and also fast
+    html = ''
+    html << '<h1>Page title</h1>'
+
+    paragraphs.each do |paragraph|
+      html << "<p>#{paragraph}</p>"
+    end
+    ```
+
+## 正则表达式
+
+* 如果只是需要中查找字符串的 `text`, 不要使用正则表达式：`string['text']`
+
+* 针对简单的结构, 你可以直接使用string[/RE/]的方式来查询. 
+
+    ```Ruby
+    match = string[/regexp/]             # get content of matched regexp
+    first_group = string[/text(grp)/, 1] # get content of captured group
+    string[/text (grp)/, 1] = 'replace'  # string => 'text replace'
+    ```
+
+* 当无需引用分组内容时, 应该使用(?:RE)代替(RE). 
+
+    ```Ruby
+    /(first|second)/   # bad
+    /(?:first|second)/ # good
+    ```
+
+* 避免使用 `$1-$9` 风格的分组引用, 而应该使用1.9新增的命名分组来代替. 
+
+    ```Ruby
+    # bad
+    /(regexp)/ =~ string
+    ...
+    process $1
+
+    # good
+    /(?<meaningful_var>regexp)/ =~ string
+    ...
+    process meaningful_var
+    ```
+
+* 字符类有以下几个特殊关键字值得注意: `^`, `-`, `\`, `]`, 所以, 不要在集合中, 转义 `.` 或者 `[]` 中的括号, 他们是正常字符.
+
+* 注意, `^` 和 `$` , 他们匹配行首和行尾, 而不是一个字符串的结尾, 如果你想匹配整个字符串, 用 `\A` 和 `\Z`。
+
+    ```Ruby
+    string = "some injection\nusername"
+    string[/^username$/]   # matches
+    string[/\Ausername\Z/] # don't match
+    ```
+
+* 使用 `x` 修饰符来匹配复杂的表达式, 这将使得RE更具可读性, 你可以添加一些有用的注释.
+注意, 所有空格将被忽略.
+
+    ```Ruby
+    regexp = %r{
+      start         # some text
+      \s            # white space char
+      (group)       # first group
+      (?:alt1|alt2) # some alternation
+      end
+    }x
+    ```
+
+*  `sub`/`gsub`也支持哈希以及代码块形式语法, 可用于复杂情形下的替换操作.
+
+
+
 
 
