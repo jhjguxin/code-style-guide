@@ -986,6 +986,92 @@
 
 *  `sub`/`gsub`也支持哈希以及代码块形式语法, 可用于复杂情形下的替换操作.
 
+## 百分号和字面值
+
+* 多用 `%w`
+
+    ```Ruby
+    STATES = %w(draft open closed)
+    ```
+
+* 定义需要插值和嵌套双引号符号的单行字符串，使用%()的方式.而多行字符串, 尽量使用heredocs格式.
+
+    ```Ruby
+    # bad (不需要插值)
+    %(<div class="text">Some text</div>)
+    # should be '<div class="text">Some text</div>' # 应该这样写
+
+    # bad (没有双引号)
+    %(This is #{quality} style)
+    # should be "This is #{quality} style" # 应该这样写
+
+    # bad (multiple lines)
+    %(<div>\n<span class="big">#{exclamation}</span>\n</div>)
+    # should be a heredoc.
+
+    # good (插值, 引号, 单行)
+    %(<tr><td class="name">#{name}</td>)
+    ```
+
+    Heredoc is a robust way to create string in PHP with more lines but without using quotations. 
+    Heredoc 是 php 中不使用引号就可以创建多行字符串的一种强大的方式。
+
+    line-oriented string literals (Here document)
+There's a line-oriente form of the string literals that is usually called as `here document`. Following a `<<` you can specify a string or an identifier to terminate the string literal, and all lines following the current line up to the terminator are the value of the string. If the terminator is quoted, the type of quotes determines the type of the line-oriented string literal. Notice there must be **no space between `<<` and the terminator** . 
+
+    If the - placed before the delimiter, then all leading whitespcae characters (tabs or spaces) are stripped from input lines and the line containing delimiter. This allows here-documents within scripts to be indented in a natural fashion. 
+
+    ```Ruby
+      print <<EOF
+        The price is #{$Price}.
+        EOF
+
+      print <<"EOF";			# same as above
+    The price is #{$Price}.
+    EOF
+
+      print <<`EOC`			# execute commands
+    echo hi there
+    echo lo there
+    EOC
+
+      print <<"foo", <<"bar"	# you can stack them
+    I said foo.
+    foo
+    I said bar.
+    bar
+
+      myfunc(<<"THIS", 23, <<'THAT')
+    Here's a line
+    or two.
+    THIS
+    and here's another.
+    THAT
+
+      if need_define_foo
+        eval <<-EOS			# delimiters can be indented
+          def foo
+            print "foo\n"
+          end
+        EOS
+      end
+    ```
+
+* 使用 `%r` 的方式定义包含多个 `/` 符号的正则表达式。
+
+    ```Ruby
+    # bad
+    %r(\s+)
+
+    # still bad
+    %r(^/(.*)$)
+    # should be /^\/(.*)$/
+
+    # good
+    %r(^/blog/2011/(.*)$)
+    ```
+
+
 
 
 
