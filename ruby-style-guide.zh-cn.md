@@ -1057,7 +1057,7 @@ There's a line-oriente form of the string literals that is usually called as `he
       end
     ```
 
-* 使用 `%r` 的方式定义包含多个 `/` 符号的正则表达式。
+* `%r` 的方式只适合于定义包含多个 `/` 符号的正则表达式。
 
     ```Ruby
     # bad
@@ -1071,8 +1071,75 @@ There's a line-oriente form of the string literals that is usually called as `he
     %r(^/blog/2011/(.*)$)
     ```
 
+    ```Ruby
+    irb(main):001:0> string="asdfas.64"
+    => "asdfas.64"
+    irb(main):002:0> string[/^\/(.*)$/]
+    => nil
+    irb(main):003:0> string="/asdfas.64"
+    => "/asdfas.64"
+    irb(main):004:0> string[/^\/(.*)$/]
+    => "/asdfas.64"
+    irb(main):007:0> string="/blog/2011/asdfas.64"
+    => "/blog/2011/tmp/asdfas.64"
+    irb(main):008:0> string[%r(^/blog/2011/(.*)$)]
+    => "/blog/2011/tmp/asdfas.64"
+    ```
 
+* 避免使用`%q`，`%Q`， `%x`， `%s`,和 `%W`
 
+* 优先使用()作为%类语法格式的分隔符.(译者注, 本人很喜欢 `%(...)`, 不过Programming Ruby中, 显然更喜欢使用%{}的方式)
 
+## 元编程
 
+* 在编写库时，不要乱动核心库。（不要画蛇添足）
 
+## 杂项
+
+* 总是打开Ruby -w开关。
+* 通常情况下, 尽量避免使用哈希作为方法的 `optional` 参数. (此时应该考虑这个方法是不是功能太多?)
+* 避免一个方法内容超过10行代码, 理想情况下, 大多数方法内容应该少于5行.(不算空行)
+* 尽量避免方法的参数超过三或四个.
+* 有时候, 必须用到全局方法, 应该增加这些方法到 Kernel 模块，并设置他们可见性关键字为 `private`。
+* 尽可能使用类实例变量代替全局变量. (译者注:是类实例变量, 而不是类的实例变量. 汗~~)
+
+    ```Ruby
+    #bad
+    $foo_bar = 1
+
+    #good
+    class Foo
+      class << self
+        attr_accessor :bar
+      end
+    end
+
+    Foo.bar = 1
+    ```
+
+* 能够用 `alias_method` 就不要用 `alias`。
+* 使用 `OptionParser` 来解析复杂的命令行选项， 较简单的命令行， `-s` 参数即可。
+* 按照功能来编写方法, 当方法名有意义时, 应该避免方法功能被随意的改变。
+* 避免不需要的元编程。
+* 除非必要, 避免更改已经定义的方法的参数。
+* 避免超过三级的代码块嵌套。
+* 应该持续性的遵守以上指导方针。
+* 多使用（生活）常识。
+
+# Contributing
+
+Nothing written in this guide is set in stone. It's my desire to work
+together with everyone interested in Ruby coding style, so that we could
+ultimately create a resource that will be beneficial to the entire Ruby
+community.
+
+Feel free to open tickets or send pull requests with improvements. Thanks in
+advance for your help!
+
+# Spread the Word
+
+A community-driven style guide is of little use to a community that
+doesn't know about its existence. Tweet about the guide, share it with
+your friends and colleagues. Every comment, suggestion or opinion we
+get makes the guide just a little bit better. And we want to have the
+best possible guide, don't we?
