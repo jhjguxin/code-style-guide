@@ -410,7 +410,60 @@ Rails 是一个坚持己见的框架，而这也是一份坚持己见的指南�
           end
         ```
 
-## Internationalization
+## Internationalization 国际化
 
-* 视图、模型与控制器里不应使用语言相关设置与字串。这些文字应搬到在 config/locales 下的语言文件里。
+* 视图、模型与控制器里不应设置字符串或者其他语言相关设置。这些文字应搬到在 `config/locales` 下的语言文件里。
+* 当 ActiveRecord 模型的标签需要被翻译时，使用 `activerecord` 作用域:
+
+    ```
+    en:
+      activerecord:
+        models:
+          user: Member
+        attributes:
+          user:
+            name: "Full name"
+    ````
+
+    然后 `User.model_name.human` 将会返回 "Member" 以及 `User.human_attribute_name("name")` 将会返回 "Full name"。这些属性的翻译会被视图作为标签。
+
+* 把在视图使用的文字和 ActiveRecord 的属性的翻译应该分开。将 models 的 locale 文件放在一个名叫 `models` 的文件夹中，并且将在视图中使用的文字放在一个名叫 `views` 的文件夹中。
+  * 当使用了额外的目录来组织 locale 文件之时，为了要载入这些目录，要在 application.rb 文件里描述这些目录。
+        ```Ruby
+        # config/application.rb
+        config.i18n.load_path += Dir[Rails.root.join('config'), 'locales', '**', '*.{rb.yml}']
+        ```
+
+* 把共享的 localization 选项，像是日期及货币格式，放在 `locales` 的根目录下。
+* 使用缩写形式的 I18n 方法： `I18n.t` 代替 `I18n.translate` 以及 'I18n.l' 代替 'I18n.localize'。
+    ```Ruby
+    translate # Lookup text translations
+    localize # Localize Date and Time objects to local formats
+    ```
+* 使用 "lazy" 查询视图中使用的文字。假设我们有以下结构：
+    ```
+    en:
+      users:
+        show:
+          title: "User details page"
+    ```
+
+    `users.show.title` 这样的(locals)值能被 `app/views/users/show.html.haml` 以如下方式查询：
+    ```Ruby
+    = t '.title'
+    ```
+
+* 在控制器以及模型中使用点分割的方式替代 `:scope` 选项。点分割形式的调用更加易读和追踪层级。
+
+    ```Ruby
+    # use thsi call
+    I18n.t 'activerecord.errors.messages.record_invalid'
+
+    # instead of this
+    I18n.t :record_invalid, :scope => [:activerecord, :errors, :messages]
+    ```
+* 关于 Rails i18n 更详细的信息可以在这里找到 [Rails Guides](http://guides.rubyonrails.org/i18n.html)。
+
+## Assets
+
 
