@@ -416,13 +416,14 @@ an empty database.
 
         ```Ruby
         #public/javascripts/rails.validations.custom.js.coffee
-        clientSideValidations.validators.remote['email'] = (element, options) ->
+        ClientSideValidations.validators.remote['email'] = (element, options) ->
           if $.ajax({
             url: '/validators/email.json',
             data: { email: element.val() },
             async: false
           }).status == 404
             return options.message || 'invalid e-mail format'
+          end
         ```
 
 ## Internationalization
