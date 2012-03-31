@@ -270,9 +270,149 @@ Rails 是一个坚持己见的框架，而这也是一份坚持己见的指南�
 
         查看  [gem documentation](https://github.com/norman/friendly_id) 文档 获得更多关于使用的信息。
 
+### ActiveResource
 
+* 当 `HTTP` 响应的是与现有不同的格式（XML 和 JSON）或者需要解析某些额外的格式，创建你自己的 format 并且在类中使用。定制的格式应该属于下面四类方法：`extension`， `mime_type`，`encode` 和 `decode`。
 
+    ```Ruby
+    module ActiveResource
+      module Formats
+        module Extend
+          module CSVFormat
+            extent self
 
+            def extension
+              'csv'
+            end
 
+            def mime_type
+              'text/csv'
+            end
+
+            def encode(hash, options = nil)
+              # Encode the data in the new format and return it
+            end
+
+            def decode(csv)
+              # Decode the data from the new format and return it
+            end
+          end
+        end
+      end
+    end
+
+    class User < ActiveResource::Base
+      self.format = ActiveResource::Formats::Extend::CSVFormat
+
+      ...
+    end
+    ```
+
+* 如果需要发送扩展名的请求，覆写 `ActiveResource::Base` 的 `element_path` 及 `collection_path` 方法，并移除扩展名部份。
+
+    ```Ruby
+    class User < ActiveResource::Base
+      ...
+
+      def self.collection_path(prefix_options = {}, query_options = nil)
+        prefix_options, query_options = split_options(prefix_options) if query_options.nil?
+        "#{prefix(prefix_options)}#{collection_name}/#{URI.parser.escape id.to_s}#{query_string(query_options)}"
+      end
+    end
+    ```
+
+    如有任何改动网址的需求时，这些方法也可以被覆写。
+
+## Migrations
+
+* 将 `schema.rb` 置于版本控制中。
+* 使用 `rake db:scheme:load` 取代 `rake db:migrate` 来初始化空的数据库。
+* 使用 `rake db:test:prepare` 来更新测试数据库结构。
+* 避免在表里设置缺省数据。使用模型层来取代。
+
+    ```Ruby
+    def amount
+      self[:amount] or 0
+    end
+    ```
+
+    然而 `self[:attr_name]` 的使用被视为相当常见的，你也可以考虑使用更罗嗦的（争议地可读性更高的） `read_attribute` 来取代：
+
+    ```Ruby
+    def amount
+      read_attribute(:amount) or 0
+    end
+    ```
+
+* 当编写结构性的迁移时（加入表或字段位），使用 Rails 3.1 的新方式来迁移， 使用 `change` 方法取代 `up` 与 `down` 方法。
+
+    ```Ruby
+    # the old way
+    class AddNameToPerson < ActiveRecord::Migration
+      def up
+        add_column :person, :name, :string
+      end
+
+      def down
+        remove_column :person, :name
+      end
+    end
+
+    # the new prefered way
+    class AddNameToPerson < ActiveRecord::Migration
+      def change
+        add_column :person, :name, :string
+      end
+    end
+    ```
+
+## Views
+
+* 不要直接从视图调用模型层。
+* 不要在视图中构造复杂的格式，把它们输出到视图 `helper` 的一个方法或是模型。
+* 使用 `partial` 模版和布局来减少重复的代码
+* 加入 [client side validation](https://github.com/bcardarella/client_side_validations) 到定制的 validators。要做的步骤有：
+  * 声明一个继承 `ClientSideValidations::Middleware::Base` 的定制验证 
+
+        ```Ruby
+        module ClientSideValidations::Middleware
+          class Email < Base
+            def response
+              if request.params[:email] =~ /^([^@\s]+)@((?:[-a-z0-9]+[a-z]{2,}))$/i
+                  self.status = 200
+                else
+                  self.status = 404
+                end
+                super
+              end
+            end
+          end
+        end
+        ```
+
+  * 新建一个文件 `public/javascripts/rails.validations.custom.js.coffee` 并在你的 `application.js.coffee` 文件加入一个它的引用：
+
+        ```Ruby
+        # app/assets/javascripts/application.js.coffee
+        # = require rails.validations.custom
+        ```
+  * 添加你的 client-side validator：
+
+        ```Ruby
+        # public/javascripts/rails.validations.custom.js.coffee
+        ClientSideValidations.validations.remote['email'] = (element, options) ->
+          if $.ajax({
+            url: '/validators/email.json',
+            data: { email: element.val() },
+            async: false
+          }).status == 404
+            return options.message || 'invalid e-mail format'
+          end
+        ```
+
+## Internationalization
+
+* 视图、模型与控制器里不应设置字符串或者其他语言相关设置。这些文字应搬到在 `config/locales` 下的语言文件里。
+* 当 ActiveRecord 模型的标签需要被翻译时，使用 `activerecord` 作用域:
 
 

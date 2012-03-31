@@ -765,10 +765,11 @@
     end
 
     # good
-    if n.zero?
+    if d.zero?
       puts "Cannot divide by 0!"
     else
       n / d
+    end
     ```
 
 * 应该总是避免拦截(最顶级的)Exception异常类.
