@@ -469,3 +469,156 @@ Rails 是一个坚持己见的框架，而这也是一份坚持己见的指南�
 利用 [assets pipeline](http://guides.rubyonrails.org/asset_pipeline.html) 来合理的组织应用的结构。
 
 The asset pipeline provides a framework to concatenate and minify or compress JavaScript and CSS assets. It also adds the ability to write these assets in other languages such as CoffeeScript, Sass and ERB.
+
+* `asset pipeline` 提供了一个框架来组合精简或者编译 JavaScrip 和 CSS assets。它同样也使得用其他语言如 CoffeScript， Sass 和 ERB 编写 assets 成为可能。
+* 第三方代码比如 [jQuery](http://jquery.com/) 或者 [bootstrap](http://twitter.github.com/bootstrap/) 应该被放在 `vendor/assets` 中。
+* 如果可能，使用 gem 化的 assets 版本。(如： [jquery-rails](https://github.com/rails/jquery-rails))。
+
+## Mailers
+
+* 把 mailers 命名为 `SomethingMailer`。 没有 `Mailer` 后缀，不能立即显现它是一个 mailer，以及哪个视图与它有关。
+* 提供 HTML 以及纯文本（给）视图模板。
+* 在你的开发环境中启用信件发送失败 errors railsed。这些错误缺省是被停用的。
+
+    ```Ruby
+    # config/environments/development.rb
+
+    config.action_mailer.raise_delivery_errors = true
+    ```
+
+* 在开发模式环境中使用 `smtp.gmail.com` （除非你有了本地的 SMTP 服务器，当然可以使用自己的服务器地址）。
+
+    ```Ruby
+    # config/environments/development.rb
+
+    config.action_mailer.smtp_settings = {
+      address: 'smtp.gmail.com',
+      # more settings
+    }
+    ```
+* 提供一个缺省的主机名。
+
+    ```Ruby
+    # config/environments/development.rb
+    config.action_mailer.default_url_options = {host: "#{local_ip}:3000"}
+
+
+    # config/environments/production.rb
+    config.action_mailer.default_url_options = {host: 'your_site.com'}
+
+    # in your mailer class
+    default_url_options[:host] = 'your_site.com'
+    ```
+
+* 如果你需要在email中使用一个到站点的连接，通常使用 `_url` 而不是 `_path` 方法。`_url` 方法包含主机名但是 `_path` 方法却不包含。
+
+    ```Ruby
+    # wrong
+    You can always find more info about this course
+    = link_to 'here', url_for(course_path(@course))
+
+    # right
+    You can alway find more info about this course
+    = link_to 'here', url_for(course_url(@course))
+   ```
+
+* 正确地显示寄与收件人地址的格式。使用下列格式：
+
+    ```Ruby
+    # in your mailer class
+    default from: 'Your Name <info@your_site.com>'
+    ```
+
+* 确保在你测试环境中 e-mail 邮寄方法被设置为 `test`：
+
+    ```Ruby
+    # config/environments/test.rb
+
+    config.action_mailer.delivery_method = :test
+    ```
+
+* 在开发模式和产品模式环境中邮寄方法应该是 `smtp`：
+
+    ```Ruby
+    # config/environments/development.rb, config/environments/production.rb
+
+    config.action_mailer.deliver_method = :smtp
+    ```
+
+* 当发送 HTML email 时，所有样式应为行内样式，这是由于某些用户有关于外部样式的问题。某种程度上这使得更难管理及造成代码重用。有两个相似的 gem 可以转换样式，以及将它们放在对应的 html 标签里： [premailer-rails3](https://github.com/fphilipe/premailer-rails3) 和 [roadie](https://github.com/Mange/roadie)。
+
+* 应避免页面产生响应时寄送 email。若多个 email 寄送时，会造成了页面载入延迟，以及请求可能超时。使用 [delayed_job](https://github.com/tobi/delayed_job) gem 的帮助来克服在背景处理寄送 email 的问题。
+
+## Bundler
+
+* 将只在开发模式或者测试模式中使用的 gems 放入 Gemfile 内相应的 group 中。
+* 在你的项目中只使用公认的 gem。 如果你考虑引入某些鲜为人知的 gem，你应该先仔细复查一下它的源代码。
+* 关于多个开发者使用不同操作系统的项目，操作系统相关的 gem 缺省会产生一个经常变动的 Gemfile.lock 。 在 Gemfile 文件里，所有与 OS X 相关的 gem 放在 `darwin` 群组，而所有 Linux 相关的 gem 放在 `linux` 群组：
+
+    ```Ruby
+    # Gemfile
+    group :darwin do
+      gem 'rb-fsevent'
+      gem 'growl'
+    end
+
+    group :linux do
+      gem 'rb-inotify'
+    end
+    ```
+
+    要在对的环境获得合适的 gem ， 添加以下代码至 `config/application.rb`：
+
+    ```Ruby
+    platform = RUBY_PLATFORM.math(/(linux/darwin)/)[0].to_sym
+    Bundler.require(platform)
+    ```
+
+* 不要把 Gemfile.lock 文件从版本控制中移除。这不是随机产生的文件 - 它确保你所有的组员执行 `bundle install` 时，能够获得相同版本的 gem 。
+
+## Priceless Gems 无价的 Gems
+
+一个最重要的编程理念是 "不要重造轮子！" 。若你遇到一个特定问题，在你开始前，总是应该去看一下是否有存在的解决方案。下面是一些在很多 Rails 项目中 "无价的" gem 列表（全部兼容 Rails 3.1）：
+
+* [active_admin](https://github.com/gregbell/active_admin) - 通过ActiveAdmin 你创建你的 Rails 应用程序的 admin 界面好像玩一样。你可以得到一个漂亮的仪表盘，CRUD UI 以及更多。非常灵活以及定制性（很强）。
+* [capybara](https://github.com/jnicklas/capybara) - Capybara 旨在简化整合测试 Rack 应用的过程，像是 Rails、Sinatra 或 Merb。Capybara 模拟了真实用户使用 web 应用的互动。 它与你测试在运行的驱动无关，并原生搭载 Rack::Test 及 Selenium 支持。透过外部 gem 支持 HtmlUnit、WebKit 及 env.js 。与 RSpec & Cucumber 一起使用工作良好。
+* [carrierwave](https://github.com/jnicklas/carrierwave) - Rails 终极文件上传解决方案。支持上传档案（及很多其它的酷玩意儿的）的本地储存与云储存。与 ImageMagick 的图片后期处理整合得非常好。
+* [client_side_validations](https://github.com/bcardarella/client_side_validations) - 一个美妙的 gem ，为你依据现有的服务器端的模型验证自动产生 Javascript 用户端验证。高度推荐！
+* [compass-rails](https://github.com/chriseppstein/compass)  一个优秀的 gem，添加了某些 css 框架的支持。包括了 sass mixin 的 collection（集合），让你减少 css 文件的代码并帮你解决浏览器兼容问题。
+* [cucumber-rails](https://github.com/cucumber/cucumber-rails) - Cucumber 是一个由 Ruby 所写，开发功能测试的顶级工具。 cucumber-rails 提供了 Cucumber 的 Rails 整合。
+* [devise](https://github.com/plataformatec/devise) - Devise 是 Rails 应用的一个完整解决方案。多数情况偏好使用 devise 来开始你的客制验证方案。
+* [fabrication](http://fabricationgem.org/) - 一个很好的假数据产生器。
+* [factory_girl](https://github.com/thoughtbot/factory_girl) - 另一个 fabrication 的选择。一个成熟的假数据产生器。 Fabrication 的精神领袖先驱。
+* [faker](http://faker.rubyforge.org/) -  实用的 gem 来产生仿造的数据（名字、地址，等等）。
+* [feedzirra](https://github.com/pauldix/feedzirra) Feedzirra is a feed library that is designed to get and update many feeds as quickly as possible。
+* [friendly_id](https://github.com/norman/friendly_id) - 通过使用某些具描述性的模型属性，而不是使用 id，允许你创建 human-readable 的网址。
+* [guard](https://github.com/guard/guard) - 极佳的 gem 监控文件变化及任务的调用。搭载了很多实用的扩充。远优于 autotest 与 watchr。
+* [haml-rails](https://github.com/indirect/haml-rails) - haml-rails 提供了 Haml 的 Rails 整合。
+* [haml](http://haml-lang.com) Haml 是一个简洁的模型语言，被很多人认为（包括我）远优于 Erb。
+* [kaminari](https://github.com/amatsuda/kaminari) - 很棒的分页解决方案。
+* [machinist](https://github.com/notahat/machinist) - Machinist makes it easy to create objects for use in tests. It generates data for the attributes you don't care about, and constructs any necessary associated objects, leaving you to specify only the fields you care about in your test. 
+* [rspec-rails](https://github.com/rspec/rspec-rails) - RSpec 是 Test::MiniTest 的取代者。我不高度推荐 RSpec。 rspec-rails 提供了 RSpec 的 Rails 整合。
+* [simple_form](https://github.com/plataformatec/simple_form) - 一旦用过 simple_form（或 formatastic），你就不想听到关于 Rails 缺省的表单。它是一个创造表单很棒的DSL。
+* [simplecov-rcov](https://github.com/fguillen/simplecov-rcov) - 为了 SimpleCov 打造的 RCov formatter。若你想使用 SimpleCov 搭配 Hudson 持续整合服务器，很有用。
+* [simplecov](https://github.com/colszowka/simplecov) - 代码覆盖率工具。不像 RCov，完全兼容 Ruby 1.9。产生精美的报告。必须用！
+* [slim](http://slim-lang.com) - Slim 是一个简洁的模版语言，被视为是远远优于 HAML(Erb 就更不用说了)的语言。唯一会阻止大规模地使用它的是，主流IDE及编辑器的支持不好。它的效能是非凡的。
+* [spork](https://github.com/timcharper/spork) - 一个给测试框架（RSpec 或 现今 Cucumber）用的 DRb 服务器，每次运行前确保分支出一个乾净的测试状态。 简单的说，预载很多测试环境的结果是大幅降低你的测试启动时间，绝对必须用！
+* [sunspot](https://github.com/sunspot/sunspot) - 基于 SOLR 的全文检索引擎。
+
+这不是完整的清单，以及其它的 gem 也可以在之后加进来。以上清单上的所有 gems 皆经测试，处于活跃开发阶段，有社群以及代码的质量很高。
+
+## Flawed Gems 缺陷的 Gems
+
+这是一个有问题的或被别的 gem 取代的 gem 清单。你应该在你的项目里避免使用它们。
+
+* [rmagick](http://rmagick.rubyforge.org/) - 这个 gem 因大量消耗内存而声名狼藉。使用 minimagick 来取代。
+* [minimagick](https://github.com/probablycorey/mini_magick) - 自动测试的老解决方案。远不如 guard 及 [watchr](https://github.com/mynyml/watchr)。
+* [rcov](https://github.com/relevance/rcov) - 代码覆盖率工具，不兼容 Ruby 1.9。使用 SimpleCov 来取代。
+* [therubyracer](https://github.com/cowboyd/therubyracer) - 极度不鼓励在生产模式使用这个 gem，它消耗大量的内存。我会推荐使用 [Mustang](https://github.com/nu7hatch/mustang) 来取代。
+
+这仍是一个完善中的清单。请告诉我受人欢迎但有缺陷的 gems 。
+
+
+
+
+

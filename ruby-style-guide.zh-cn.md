@@ -725,6 +725,7 @@
       end
     end
     ```
+
     ```shell
     class SingletonTest
       def size
