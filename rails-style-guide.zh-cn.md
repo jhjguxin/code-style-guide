@@ -618,7 +618,6 @@ The asset pipeline provides a framework to concatenate and minify or compress Ja
 
 这仍是一个完善中的清单。请告诉我受人欢迎但有缺陷的 gems 。
 
-<<<<<<< HEAD
 ## Managing processes
 
 * 如果你的项目依赖于各种外部的进程使用 [foreman](https://github.com/ddollar/foreman) 来管理它们。

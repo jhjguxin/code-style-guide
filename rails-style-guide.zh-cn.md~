@@ -818,8 +818,6 @@ The asset pipeline provides a framework to concatenate and minify or compress Ja
     ```Ruby
     article = mock_model(Article).as_null_object
     ```
-=======
->>>>>>> parent of ceeb4f8... rails-style-guide.zh-cn update to 'RSpec'
 
 * 使用 `let` 代码块替代 `before(:all)` 代码块来为 spec 例子创建数据。`let` 代码块更省事。
 
