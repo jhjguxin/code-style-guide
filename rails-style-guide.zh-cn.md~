@@ -607,8 +607,8 @@ The asset pipeline provides a framework to concatenate and minify or compress Ja
 
 这不是完整的清单，以及其它的 gem 也可以在之后加进来。以上清单上的所有 gems 皆经测试，处于活跃开发阶段，有社群以及代码的质量很高。
 
+## Flawed Gems 缺陷的 Gems
 
-<<<<<<< HEAD
 这是一个有问题的或被别的 gem 取代的 gem 清单。你应该在你的项目里避免使用它们。
 
 * [rmagick](http://rmagick.rubyforge.org/) - 这个 gem 因大量消耗内存而声名狼藉。使用 minimagick 来取代。
@@ -618,6 +618,7 @@ The asset pipeline provides a framework to concatenate and minify or compress Ja
 
 这仍是一个完善中的清单。请告诉我受人欢迎但有缺陷的 gems 。
 
+<<<<<<< HEAD
 ## Managing processes
 
 * 如果你的项目依赖于各种外部的进程使用 [foreman](https://github.com/ddollar/foreman) 来管理它们。
@@ -955,4 +956,6 @@ The asset pipeline provides a framework to concatenate and minify or compress Ja
       end
     end
     ```
+
+* 在 `spec/helpers` 目录的 helper specs 是与视图 specs 分开的。
 
