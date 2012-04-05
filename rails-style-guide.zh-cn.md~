@@ -607,8 +607,8 @@ The asset pipeline provides a framework to concatenate and minify or compress Ja
 
 这不是完整的清单，以及其它的 gem 也可以在之后加进来。以上清单上的所有 gems 皆经测试，处于活跃开发阶段，有社群以及代码的质量很高。
 
-## Flawed Gems 缺陷的 Gems
 
+<<<<<<< HEAD
 这是一个有问题的或被别的 gem 取代的 gem 清单。你应该在你的项目里避免使用它们。
 
 * [rmagick](http://rmagick.rubyforge.org/) - 这个 gem 因大量消耗内存而声名狼藉。使用 minimagick 来取代。
@@ -817,6 +817,8 @@ The asset pipeline provides a framework to concatenate and minify or compress Ja
     ```Ruby
     article = mock_model(Article).as_null_object
     ```
+=======
+>>>>>>> parent of ceeb4f8... rails-style-guide.zh-cn update to 'RSpec'
 
 * 使用 `let` 代码块替代 `before(:all)` 代码块来为 spec 例子创建数据。`let` 代码块更省事。
 

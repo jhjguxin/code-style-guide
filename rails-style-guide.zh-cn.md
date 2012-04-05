@@ -618,6 +618,7 @@ The asset pipeline provides a framework to concatenate and minify or compress Ja
 
 这仍是一个完善中的清单。请告诉我受人欢迎但有缺陷的 gems 。
 
+<<<<<<< HEAD
 ## Managing processes
 
 * 如果你的项目依赖于各种外部的进程使用 [foreman](https://github.com/ddollar/foreman) 来管理它们。
@@ -817,6 +818,8 @@ The asset pipeline provides a framework to concatenate and minify or compress Ja
     ```Ruby
     article = mock_model(Article).as_null_object
     ```
+=======
+>>>>>>> parent of ceeb4f8... rails-style-guide.zh-cn update to 'RSpec'
 
 * 使用 `let` 代码块替代 `before(:all)` 代码块来为 spec 例子创建数据。`let` 代码块更省事。
 
