@@ -618,6 +618,205 @@ The asset pipeline provides a framework to concatenate and minify or compress Ja
 
 这仍是一个完善中的清单。请告诉我受人欢迎但有缺陷的 gems 。
 
+## Managing processes
+
+* 如果你的项目依赖于各种外部的进程使用 [foreman](https://github.com/ddollar/foreman) 来管理它们。
+
+# Testing Rails applications 测试 Rails 应用程序
+
+或许BDD是实现新特性的最好途径。你从写一些高阶的特性测试（通常使用Cucumber），然后使用这些测试来驱动特性的实现。首先你给特性的视图写 spec，并使用这些 spec 来创建相关的视图。之后，你为控制器创建 spec（其将会传递数据给视图）并且通过这些 spec 来实现控制器。最后你实现模型的测试以及模型自身。
+
+## Cucumber
+
+* 用 `@wip` （work in progress）标签标记你未完成的场景。这些场景不纳入测试（账单），并且不标记为测试失败。当完成一个未完成并且实现了其功能的测试，为了将这个场景加入测试套件应该移除 `@wip` 标签。
+* 设置你默认的配置文件排除标记为 `@javascript`的场景。他们（需要）使用浏览器来测试，推荐禁用它们来提高在一般场景中执行的速度。
+  * 配置文件可在 cucumber.yml 文件里配置。
+        ```Ruby
+        # 配置文件的定义：
+        profile_name: --tags @tag_name
+        ```
+
+  * 带指令运行一个配置文件：
+
+        ```
+        cucumber -p profile_name
+        ```
+
+* 如果使用 [fabrication](http://fabricationgem.org/) 来替代 fixtures，使用预订的 [fabrication steps](http://fabricationgem.org/#!cucumber-steps)。
+* 不要使用旧的 `web_steps.rb` 步骤定义！[The web steps were removed from the latest version of Cucumber.](http://aslakhellesoy.com/post/11055981222/the-training-wheels-came-off) 他们的使用会导致产生冗余的场景其并没有合适的反映出应用领域。
+* 当检查一元素的呈现的可视文字时(link, button, etc.)，检查元素的文字而不是检查 id。这样可以查出 i18n 的问题。
+* 给同种类对象创建不同的功能特色：
+
+    ```Ruby
+    # bad
+    Feature: Articles
+    # ... feature  implementation ...
+
+    # good
+    Feature: Article Editing
+    # ... feature  implementation ...
+
+    Feature: Article Publishing
+    # ... feature  implementation ...
+
+    Feature: Article Search
+    # ... feature  implementation ...
+
+    ```
+
+* 每个 feature 有三个主要的组件
+  * Title 标题
+  * Narrative 叙述（描述） - 关于 feature 的一个简单的解释。
+  * Acceptance criteria 接受标准 - 一系列的由独立的步骤组成的场景。
+* 最常见的格式称为 Connextra 格式。
+
+    ```Ruby
+    In order to [benefit] ...
+    A [stakeholder] ...
+    Wants to [feature] ...
+    ```
+
+这是最常见但不是必须的格式，叙述（narrative）可以是取决于功能复杂度的任何文字。
+
+* 自由地使用场景概述（Scenario Outlines）来保持场景 DRY (keep your scenarios DRY)。
+
+    ```Ruby
+    Scenario Outline: User cannot register with invalid e-mail
+      When I try to register with an email "<email>"
+      Then I should see the error message "<error>"
+
+    Examples:
+      |email         |error                 |
+      |              |The e-mail is required|
+      |invalid email |is not a valid e-mail |
+    ```
+
+* 场景的步骤放在 `step_definitions` 目录下的 `.rb` 文件。步骤文件命名惯例为 `[description]_steps.rb`。步骤根据不同的标准放在不同的文件里。每一个功能可能有一个步骤文件 (`home_page_steps.rb`)。也可能一个步骤文件 (articles_steps.rb)对应于某个特定对象的所有的feature。
+
+* 使用多行步骤来避免重复
+
+    ```Ruby
+    Scenario: User profile
+      Give I am logged in as a user "John Doe" with an e-mail "user@test.com"
+      when I go to my profile
+      Then I should see the following information:
+        |First name|John         |
+        |Last name |Doe          |
+        |E-mail    |user@test.com|
+
+    # the step
+    Then /^I should see the following information:$/ do |table|
+      table.raw.each do |field, value|
+        find_field(field).value.should =~ /#{value}/
+      end
+    end
+    ```
+
+* 使用复合的步骤来保持 scenar DRY
+
+    ```Ruby
+    # ...
+    When I subscribe for news from the category "Technical News"
+    # ...
+
+    # the step:
+    When /^I subscribe for news from the category "([^"]*)"$/ do category|
+      steps %Q{
+        When I go to the news categories page
+        And I select the category #{category}
+        And I click the button "Subscribe for this category"
+        And I confirm the subscription
+      }
+    end
+    ```
+* 总是使用 Capybara 否定匹配来替代 should_not 搭配肯定的情况，它们会在给定的超时时重试匹配，允许你测试 ajax 动作。[See Capybara's README for more explanation](https://github.com/jnicklas/capybara)。
+
+## RSpec
+
+* 一个例子使用一个期望值。
+
+    ```Ruby
+    # bad
+    describe ArticlesController do
+      # ...
+      describe 'GET new' do
+        it 'assigns new article and renders the new article template' do
+          get :new
+          assigns[:article].should be_a_new Article
+          response.should render_template :new
+        end
+      end
+
+      # ...
+    end
+
+    # good
+    describe 'GET new' do
+      it 'assigns a new article' do
+        get :new
+        assigns[:article].should be_a_new Article
+      end
+
+      it 'renders the new article template' do
+        get :new
+        response.should render_template :new
+      end
+
+    end
+    ```
+
+* 大量使用 `describe` 和 `context`
+* 按照如下地示例给 `describe` 区块命名：
+  * 对于 non-methods 使用 "description"
+  * 实例方法使用 `#` "#method" 
+  * 类方法使用 `.` ".method"
+
+    ```Ruby
+    Class Article
+      def summary
+        # ...
+      end
+
+      def self.latest
+        # ...
+      end
+    end
+
+    # the spec...
+    describe Article
+      describe '#summary'
+        # ...
+      end
+
+      describe '.latest'
+        # ...
+      end
+    end
+    ```
+
+* 使用 [fabricators](http://fabricationgem.org/) 来生成测试对象。
+* 大量使用 [mocks](https://www.relishapp.com/rspec/rspec-rails/v/2-4/docs/mocks/mock-model) 与 [stubs](https://www.relishapp.com/rspec/rspec-rails/v/2-4/docs/mocks/mock-model)。#模拟和存根
+  * mock_model
+    The mock_model method generates a test double that acts like an Active Model model. This is different from the stub_model method which generates an instance of a real ActiveModel class.
+    The benefit of mock_model over stub_model is that its a true double, so the examples are not dependent on the behaviour (or mis-behaviour), or even the existence of any other code. **If you're working on a controller spec and you need a model that doesn't exist, you can pass mock_model a string and the generated object will act as though its an instance of the class named by that string.**
+  * stub_model
+    **The stub_model method generates an instance of a Active Model model.**
+    While you can use stub_model in any example (model, view, controller, helper), it is especially useful in view examples, which are inherently more state-based than interaction-based.
+
+
+
+    ```Ruby
+    # mocking a model
+    article = mock_model(Article)
+
+    # stubbing a method
+    Article.stub(:find).with(article.id).and_return(article)
+    ```
+* 当 mocking 一个模型时，使用 as_null_object 方法。它告诉输出仅监听我们预期的消息，并忽略其它的消息。
+
+    ```Ruby
+    article = mock_model(Article).as_null_object
+    ```
 
 
 
