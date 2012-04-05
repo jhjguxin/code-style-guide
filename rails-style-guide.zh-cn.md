@@ -797,13 +797,13 @@ The asset pipeline provides a framework to concatenate and minify or compress Ja
 * 使用 [fabricators](http://fabricationgem.org/) 来生成测试对象。
 * 大量使用 [mocks](https://www.relishapp.com/rspec/rspec-rails/v/2-4/docs/mocks/mock-model) 与 [stubs](https://www.relishapp.com/rspec/rspec-rails/v/2-4/docs/mocks/mock-model)。#模拟和存根
   * mock_model
+
     The mock_model method generates a test double that acts like an Active Model model. This is different from the stub_model method which generates an instance of a real ActiveModel class.
     The benefit of mock_model over stub_model is that its a true double, so the examples are not dependent on the behaviour (or mis-behaviour), or even the existence of any other code. **If you're working on a controller spec and you need a model that doesn't exist, you can pass mock_model a string and the generated object will act as though its an instance of the class named by that string.**
   * stub_model
+
     **The stub_model method generates an instance of a Active Model model.**
     While you can use stub_model in any example (model, view, controller, helper), it is especially useful in view examples, which are inherently more state-based than interaction-based.
-
-
 
     ```Ruby
     # mocking a model
@@ -818,6 +818,141 @@ The asset pipeline provides a framework to concatenate and minify or compress Ja
     article = mock_model(Article).as_null_object
     ```
 
+* 使用 `let` 代码块替代 `before(:all)` 代码块来为 spec 例子创建数据。`let` 代码块更省事。
 
+    ```Ruby
+    # use this 
+    let(:article) { Fabricate(:article) }
 
+    # ... instead of this:
+    before(:each) { @article = Fabricate(:article) }
+    ```
+
+* 尽可能使用 `subject`。
+
+    ```Ruby
+    describe Article do
+      subject { Fabricate(:article) }
+
+      it 'is not published on creation' do
+        subject.should_not be_published
+      end
+    end
+    ```
+
+* 可能的话使用 `specify`。它是 `it` 的代名词但是在没有说明文字的时候更具可读性。
+
+    ```Ruby
+    # bad
+    describe Article do
+      before { @article = Fabricate(:article) }
+
+      it 'is not published on creation' do
+        @article.should_not be_published
+      end
+    end
+
+    # good
+    describe Article do
+      let(:article) { Fabricate(:article) }
+      specify { article.should_not be_published }
+    end
+    ```
+
+* 尽可能使用 `its`。
+
+    ```Ruby
+    # bad
+    describe Article do
+      subject { Fabricate(:article) }
+
+      it 'has the current date as creation date' do
+        subject.creation_date.should == Date.today
+      end
+    end
+
+    # good
+    describe Article do
+      subject { Fabricate(:article) }
+      its(:creation_date) { should == Date.today }
+    end
+    ```
+
+### Views 视图测试
+
+* view spec 的目录结构 `spec/views`要与 `app/views` 一致。例如，视图 `app/views/users`的 spec 例子被放在 `spec/views/users`。 
+* 视图的 specs 的命名惯例是添加 `_spec.rb` 至视图名字之后，举例来说，视图 `_form.html.haml` 有一个对应的测试叫做 `_form.html.haml_spec.rb`。
+* 每个视图测试文件都需要 `spec_helper.rb`。 
+* 外部描述区块使用的是不含 `app/views` 部分的视图路径。在 `render` 方法没有传入参数时，是这么使用的。
+
+    ```Ruby
+    # spec/views/articles/new.html.haml_spec.rb
+    require 'spec_helper'
+
+    describe 'articles/new.html.haml' do
+      # ...
+    end
+    ```
+
+* 永远在视图测试使用 mock 模型。（因为）视图的目的只是显示信息。
+* `assign` 方法提供实例变量（在产品生产环境中，它是）由控制器提供给视图使用的。
+
+    ```Ruby
+    # spec/views/articles/edit.html.haml_spec.rb
+    describe 'articles/edit.html.haml' do
+    it 'renders the form for a new article creation' do
+      assign(
+        :article,
+        mock_model(Article).as_new_record.as_null_object
+      )
+      render
+      rendered.should have_selector('form',
+        method: 'post',
+        action: articles_path
+      ) do |form|
+        form.should have_selector('input', type: 'submit')
+      end
+    end
+    ```
+
+* 偏好 capybara 否定选择器，胜于搭配肯定的 should_not 。
+
+    ```Ruby
+    # bad
+    page.should_not have_selector('input', type: 'submit')
+    page.should_not have_xpath('tr')
+
+    # good
+    page.should have_no_selector('input', type: 'submit')
+    page.should have_no_xpath('tr')
+    ```
+
+* 当一个视图使用 helper methods 时，这些方法需要被 stubbed。Stubbing 这些 helper 方法是在 `template` 完成的：
+
+    ```Ruby
+    # app/helpers/articles_helper.rb
+    class ArticlesHelper
+      def formatted_date(date)
+        # ...
+      end
+    end
+
+    # app/views/articles/show.html.haml
+    = "Published at: #{formatted_date(@article.published_at)}"
+
+    # spec/views/articles/show.html.haml_spec.rb
+    describe 'articles/show.html.html' do
+      it 'displays the formatted date of article publishing'
+        article = mock_model(Article, published_at: Date.new(2012, 01, 01))
+        assign(:article, article)
+
+        template.stub(:formatted_date).with(article.published_at).and_return '01.01.2012'
+
+        render
+        rendered.should have_content('Published at: 01.01.2012')
+      end
+    end
+    ```
+
+* 在 `spec/helpers` 目录的 helper specs 是与视图 specs 分开的。
 
