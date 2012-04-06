@@ -618,7 +618,6 @@ The asset pipeline provides a framework to concatenate and minify or compress Ja
 
 这仍是一个完善中的清单。请告诉我受人欢迎但有缺陷的 gems 。
 
-<<<<<<< HEAD
 ## Managing processes
 
 * 如果你的项目依赖于各种外部的进程使用 [foreman](https://github.com/ddollar/foreman) 来管理它们。
@@ -956,4 +955,168 @@ The asset pipeline provides a framework to concatenate and minify or compress Ja
     ```
 
 * 在 `spec/helpers` 目录的 helper specs 是与视图 specs 分开的。
+
+## Controllers 控制器测试
+
+* 对于 models 使用 mock_model，对于 models 的方法使用 stub。controller 测试应该不依赖于model 创建（的数据）。
+* 按照习惯 controller 测试仅仅需要负责如下：
+  * 执行特定方法
+  * 从 action 返回的数据 - assigns，等等。
+  * 从 action 返回的结果 - template 渲染，重定向等等。
+
+        ```Ruby
+        # Example of a  commonly used controller spec
+        # spec/controllers/articles_controller_spec.rb
+        # We are interested only in the actions the controller should perform
+        # So we are mocking the model creation and stubbing its methods
+        # And we concentrate only on the things the controller should do
+        describe ArticlesContrller do
+          # The model will be used in the spec for all methods of controller
+          let(:article) { mock_model(Article) }
+
+          describe 'POST create' do
+            before { Article.stub(:new).and_return(article) }
+
+            it 'creates a new article with the given arrtibutes' do
+              Article.should_receive(:new).with(title: 'The New Article Title').and_return(article)
+              post :create, message: { title: 'The New Article Title' }
+            end
+
+            it 'saves the article' do
+              article.should_receive(:save)
+              post :create
+            end
+
+            it 'redirects to the Articles index' do
+              article.stub(:save)
+              post :create
+              response.should redirect_to(action: 'index')
+            end
+          end
+        end
+        ```
+
+* 当控制器 action 依据接收的参数有不同行为时，使用 context。
+
+    ```Ruby
+    # A classic example for use of contexts in a controller spec is creation or update when the object saves successfully or not.
+
+    describe ArticlesController do
+      let(:article) { mock_model(Article) }
+
+      describe 'POST create' do
+        before { Article.stub(:new).and_return(article) }
+
+        it 'creates a new article with the given attributes' do
+          Article.should_receive(:new).with(title: 'The New Article Title').and_return(article)
+          post :create, article: { title: 'The New Article Title' }
+        end
+
+        it 'saves the article' do
+          article.should_receive(:save)
+          post :create
+        end
+
+        context 'when the article saves successfully' do
+          before { article.stub(:save).and_return(true) }
+
+          it 'sets a flash[:notice] message' do
+            post :create
+            flash[:notice].should eq('The article was saved successfully.')
+          end
+
+          it 'redirects to the Articles index' do
+            post :create
+            response.should redirect_to(action: 'index')
+          end
+        end
+
+        context 'when the article fails to save' do
+          before { article.stub(:save).and_return(false) }
+
+          it 'assigns @article' do
+            post :create
+            assigns[:article].should be_eql(article)
+          end
+
+          it 're-renders the "new" template' do
+            post :create
+            response.should render_template('new')
+          end
+        end
+      end
+    end
+    ```
+
+### Models 模型测试
+
+* 不要在 models 自己的 spec example 里 使用 mock_model 的方式测试模型。
+* 使用 fabrication 来生成真实的对象。
+* 使用 mock_model 别的模型或子对象是可接受的。
+* 在测试里建立用于所有例子的模型（对象）来避免重复。
+
+    ```Ruby
+    describe Article
+      let(:article) { Fabricate(:article) }
+    end
+    ```
+
+* 加入一个例子确保 fabricated的模型(对象)是有效的。 
+
+    ```Ruby
+    describe Article
+      it 'is valid with valid attributes' do
+        article.should be_valid
+      end
+    end
+    ```
+
+* 在测试验证时，使用 `have(x).errors_on` 来指定要被验证的属性。使用 `be_valid` 不保证目标属性的（非法）的问题。（因为be_valid会验证每个问题）
+
+    ```Ruby
+    # bad
+    describe '#title'
+      it 'is required' do
+        article.title = nil
+        article.should_not be_valid
+      end
+    end
+
+    # prefered
+    describe '#title'
+      it 'is required' do
+        article.title = nil
+        article.should have(1).error_on(:title)
+      end
+    end
+    ```
+
+* 给每个有验证的属性分别添加 `describe`。
+
+    ```Ruby
+    describe Article
+      describe '#title'
+        it 'is required' do
+          article.title = nil
+          article.should have(1).error_on(:title)
+        end
+      end
+    end
+    ```
+
+* 当测试模型属性的唯一性时，把其它对象命名为 `another_object`。
+
+    ```Ruby
+    describe Article
+      describe '#title'
+        it 'is unique' do
+          another_article = Fabricate.build(:article, title: article.title)
+          #article.should have(1).error_on(:title)
+          another_article.should have(1).error_on(:title)
+        end
+      end
+    end
+    ```
+
+
 

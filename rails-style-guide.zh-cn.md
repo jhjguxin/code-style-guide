@@ -956,3 +956,257 @@ The asset pipeline provides a framework to concatenate and minify or compress Ja
 
 * 在 `spec/helpers` 目录的 helper specs 是与视图 specs 分开的。
 
+## Controllers 控制器测试
+
+* 对于 models 使用 mock_model，对于 models 的方法使用 stub。controller 测试应该不依赖于model 创建（的数据）。
+* 按照习惯 controller 测试仅仅需要负责如下：
+  * 执行特定方法
+  * 从 action 返回的数据 - assigns，等等。
+  * 从 action 返回的结果 - template 渲染，重定向等等。
+
+        ```Ruby
+        # Example of a  commonly used controller spec
+        # spec/controllers/articles_controller_spec.rb
+        # We are interested only in the actions the controller should perform
+        # So we are mocking the model creation and stubbing its methods
+        # And we concentrate only on the things the controller should do
+        describe ArticlesContrller do
+          # The model will be used in the spec for all methods of controller
+          let(:article) { mock_model(Article) }
+
+          describe 'POST create' do
+            before { Article.stub(:new).and_return(article) }
+
+            it 'creates a new article with the given arrtibutes' do
+              Article.should_receive(:new).with(title: 'The New Article Title').and_return(article)
+              post :create, message: { title: 'The New Article Title' }
+            end
+
+            it 'saves the article' do
+              article.should_receive(:save)
+              post :create
+            end
+
+            it 'redirects to the Articles index' do
+              article.stub(:save)
+              post :create
+              response.should redirect_to(action: 'index')
+            end
+          end
+        end
+        ```
+
+* 当控制器 action 依据接收的参数有不同行为时，使用 context。
+
+    ```Ruby
+    # A classic example for use of contexts in a controller spec is creation or update when the object saves successfully or not.
+
+    describe ArticlesController do
+      let(:article) { mock_model(Article) }
+
+      describe 'POST create' do
+        before { Article.stub(:new).and_return(article) }
+
+        it 'creates a new article with the given attributes' do
+          Article.should_receive(:new).with(title: 'The New Article Title').and_return(article)
+          post :create, article: { title: 'The New Article Title' }
+        end
+
+        it 'saves the article' do
+          article.should_receive(:save)
+          post :create
+        end
+
+        context 'when the article saves successfully' do
+          before { article.stub(:save).and_return(true) }
+
+          it 'sets a flash[:notice] message' do
+            post :create
+            flash[:notice].should eq('The article was saved successfully.')
+          end
+
+          it 'redirects to the Articles index' do
+            post :create
+            response.should redirect_to(action: 'index')
+          end
+        end
+
+        context 'when the article fails to save' do
+          before { article.stub(:save).and_return(false) }
+
+          it 'assigns @article' do
+            post :create
+            assigns[:article].should be_eql(article)
+          end
+
+          it 're-renders the "new" template' do
+            post :create
+            response.should render_template('new')
+          end
+        end
+      end
+    end
+    ```
+
+### Models 模型测试
+
+* 不要在 models 自己的 spec example 里 使用 mock_model 的方式测试模型。
+* 使用 fabrication 来生成真实的对象。
+* 使用 mock_model 别的模型或子对象是可接受的。
+* 在测试里建立用于所有例子的模型（对象）来避免重复。
+
+    ```Ruby
+    describe Article
+      let(:article) { Fabricate(:article) }
+    end
+    ```
+
+* 加入一个例子确保 fabricated的模型(对象)是有效的。 
+
+    ```Ruby
+    describe Article
+      it 'is valid with valid attributes' do
+        article.should be_valid
+      end
+    end
+    ```
+
+* 在测试验证时，使用 `have(x).errors_on` 来指定要被验证的属性。使用 `be_valid` 不保证目标属性的（非法）的问题。（因为be_valid会验证每个问题）
+
+    ```Ruby
+    # bad
+    describe '#title'
+      it 'is required' do
+        article.title = nil
+        article.should_not be_valid
+      end
+    end
+
+    # prefered
+    describe '#title'
+      it 'is required' do
+        article.title = nil
+        article.should have(1).error_on(:title)
+      end
+    end
+    ```
+
+* 给每个有验证的属性分别添加 `describe`。
+
+    ```Ruby
+    describe Article
+      describe '#title'
+        it 'is required' do
+          article.title = nil
+          article.should have(1).error_on(:title)
+        end
+      end
+    end
+    ```
+
+* 当测试模型属性的唯一性时，把其它对象命名为 `another_object`。
+
+    ```Ruby
+    describe Article
+      describe '#title'
+        it 'is unique' do
+          another_article = Fabricate.build(:article, title: article.title)
+          #article.should have(1).error_on(:title)
+          another_article.should have(1).error_on(:title)
+        end
+      end
+    end
+    ```
+
+### Mailers
+
+* 在 mailer spec 的模型应该要被模拟。mailer 不应依赖 models 创建(实例对象)。
+* mailer 的 spec 应该确认如下(问题)：
+  * subject 是正确的
+  * receiver e-mail 是正确的
+  * e-mail 寄送至正确的邮件地址
+  * e-mail 包含了需要的信息
+
+     ```Ruby
+     describe SubscriberMailer
+       let(:subscriber) { mock_model(Subscription, email: 'johndoe@test.com', name: 'John Doe') }
+
+       describe 'successful registration email'
+         subject { SubscriptionMailer.successful_registration_email(subscriber) }
+
+         its(:subject) { should == 'Successful Registration!' }
+         its(:from) { should == ['info@your_site.com'] }
+         its(:to) { should == [subscriber.email] }
+
+         it 'contains the subscriber name' do
+           subject.body.encoded.should match(subscriber.name)
+         end
+       end
+     end
+     ```
+
+### Uploaders
+
+* 我们如何测试 uploader 大小调整是正确的。这里是一个  [carrierwave](https://github.com/jnicklas/carrierwave) 图片 uploader 的示例 spec：
+
+    ```Ruby
+
+    # rspec/uploaders/person_avatar_uploader_spec.rb
+    require 'spec_helper'
+    require 'carrierwave/test/matchers'
+
+    describe PersonAvatarUploader do
+      include CarrierWave::Test::Matchers
+
+      # Enable images processing before executing the examples
+      before(:all) do
+        UserAvatarUploader.enable_processing = true
+      end
+
+      # Create a new uploader. The model is mocked as the uploading and resizing images does not depend on the model creation.
+      before(:each) do
+        @uploader = PersonAvatarUploader.new(mock_model(Person).as_null_object)
+        @uploader.store!(File.open(path_to_file))
+      end
+
+      # Disable images processing after executing the examples
+      after(:all) do
+        UserAvatarUploader.enable_processing = false
+      end
+
+      # Testing whether image is no larger than given dimensions
+      context 'the default version' do
+        it 'scales down an image to be no larger than 256 by 256 pixels' do
+          @uploader.should be_no_larger_than(256, 256)
+        end
+      end
+
+      # Testing whether image has the exact dimensions
+      context 'the thumb version' do
+        it 'scales down an image to be exactly 64 by 64 pixels' do
+          @uploader.thumb.should have_dimensions(64, 64)
+        end
+      end
+    end
+
+    ```
+# Contributing
+
+Nothing written in this guide is set in stone. It's my desire to work
+together with everyone interested in Rails coding style, so that we could
+ultimately create a resource that will be beneficial to the entire Ruby
+community.
+
+Feel free to open tickets or send pull requests with improvements. Thanks in
+advance for your help!
+
+# Spread the Word
+
+A community-driven style guide is of little use to a community that
+doesn't know about its existence. Tweet about the guide, share it with
+your friends and colleagues. Every comment, suggestion or opinion we
+get makes the guide just a little bit better. And we want to have the
+best possible guide, don't we?
+
+
+
