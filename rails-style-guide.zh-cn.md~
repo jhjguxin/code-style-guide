@@ -1118,5 +1118,95 @@ The asset pipeline provides a framework to concatenate and minify or compress Ja
     end
     ```
 
+### Mailers
+
+* 在 mailer spec 的模型应该要被模拟。mailer 不应依赖 models 创建(实例对象)。
+* mailer 的 spec 应该确认如下(问题)：
+  * subject 是正确的
+  * receiver e-mail 是正确的
+  * e-mail 寄送至正确的邮件地址
+  * e-mail 包含了需要的信息
+
+     ```Ruby
+     describe SubscriberMailer
+       let(:subscriber) { mock_model(Subscription, email: 'johndoe@test.com', name: 'John Doe') }
+
+       describe 'successful registration email'
+         subject { SubscriptionMailer.successful_registration_email(subscriber) }
+
+         its(:subject) { should == 'Successful Registration!' }
+         its(:from) { should == ['info@your_site.com'] }
+         its(:to) { should == [subscriber.email] }
+
+         it 'contains the subscriber name' do
+           subject.body.encoded.should match(subscriber.name)
+         end
+       end
+     end
+     ```
+
+### Uploaders
+
+* 我们如何测试 uploader 大小调整是正确的。这里是一个  [carrierwave](https://github.com/jnicklas/carrierwave) 图片 uploader 的示例 spec：
+
+    ```Ruby
+
+    # rspec/uploaders/person_avatar_uploader_spec.rb
+    require 'spec_helper'
+    require 'carrierwave/test/matchers'
+
+    describe PersonAvatarUploader do
+      include CarrierWave::Test::Matchers
+
+      # Enable images processing before executing the examples
+      before(:all) do
+        UserAvatarUploader.enable_processing = true
+      end
+
+      # Create a new uploader. The model is mocked as the uploading and resizing images does not depend on the model creation.
+      before(:each) do
+        @uploader = PersonAvatarUploader.new(mock_model(Person).as_null_object)
+        @uploader.store!(File.open(path_to_file))
+      end
+
+      # Disable images processing after executing the examples
+      after(:all) do
+        UserAvatarUploader.enable_processing = false
+      end
+
+      # Testing whether image is no larger than given dimensions
+      context 'the default version' do
+        it 'scales down an image to be no larger than 256 by 256 pixels' do
+          @uploader.should be_no_larger_than(256, 256)
+        end
+      end
+
+      # Testing whether image has the exact dimensions
+      context 'the thumb version' do
+        it 'scales down an image to be exactly 64 by 64 pixels' do
+          @uploader.thumb.should have_dimensions(64, 64)
+        end
+      end
+    end
+
+    ```
+# Contributing
+
+Nothing written in this guide is set in stone. It's my desire to work
+together with everyone interested in Rails coding style, so that we could
+ultimately create a resource that will be beneficial to the entire Ruby
+community.
+
+Feel free to open tickets or send pull requests with improvements. Thanks in
+advance for your help!
+
+# Spread the Word
+
+A community-driven style guide is of little use to a community that
+doesn't know about its existence. Tweet about the guide, share it with
+your friends and colleagues. Every comment, suggestion or opinion we
+get makes the guide just a little bit better. And we want to have the
+best possible guide, don't we?
+
 
 

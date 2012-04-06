@@ -1190,6 +1190,7 @@ The asset pipeline provides a framework to concatenate and minify or compress Ja
     end
 
     ```
+
 # Contributing
 
 Nothing written in this guide is set in stone. It's my desire to work
