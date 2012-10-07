@@ -3,9 +3,9 @@
 > 风格可以用来区分从好到卓越。<br />
 > -- Bozhidar Batsov
 
-整个 `guide` 是为了展示一系列的 Rails 3 开发的最佳实践和风格惯例。这是一份与由现存社群所驱动的与 [Ruby coding style guide](https://github.com/bbatsov/ruby-style-guide) 互补的指南。
+整个 `guide` 是为了展示一系列的 Rails 3 开发的最佳实践和风格惯例。这是一份与由现存社群所驱动的 [Ruby coding style guide](https://github.com/bbatsov/ruby-style-guide) 互补的指南。
 
-教程中 [Testing Rails applications](#testing) 章节放在 [Developing Rails applications](#developing) 是因为在我心中，我相信 [Behaviour-Driven Development](http://en.wikipedia.org/wiki/Behavior_Driven_Development) (BDD行为驱动开发) 是开发软件的最好的方法。
+教程中 [Testing Rails applications](#testing) 章节放在 [Developing Rails applications](#developing) 后面是因为在我心中，我相信 [Behaviour-Driven Development](http://en.wikipedia.org/wiki/Behavior_Driven_Development) (BDD行为驱动开发) 是开发软件的最好的方法。
 
 Rails 是一个坚持己见的框架，而这也是一份坚持己见的指南。在我的心里，我坚信 [RSpec](https://www.relishapp.com/rspec) 优于 Test::Unit，[Sass](http://sass-lang.com/) 优于 CSS 以及
 [Haml](http://haml-lang.com/)，([Slim](http://slim-lang.com/)) 优于 Erb. 所以不要期望在这里找到 Test::Unit, CSS 及 Erb 的忠告。
@@ -14,11 +14,32 @@ Rails 是一个坚持己见的框架，而这也是一份坚持己见的指南�
 
 你可以使用 [Transmuter](https://github.com/TechnoGate/transmuter) 来生成本教程的 PDF 和 HTML 副本。
 
+# Table of Contents
+
+* [开发 Rails 应用程序](#开发-rails-应用程序)
+    * [Configuration 配置](#configuration-配置)
+    * [Routing 路由](#routing-路由)
+    * [Controllers 控制器](#controllers-控制器)
+    * [Models 模型](#models-模型)
+    * [ActiveRecord](#activerecord)
+    * [Migrations](#migrations)
+    * [Views](#views)
+    * [Internationalization 国际化](#internationalization-国际化)
+    * [Assets](#assets)
+    * [Mailers](#mailers)
+    * [Bundler](#bundler)
+    * [Priceless Gems](#priceless-gems-无价的-gems)
+    * [Flawed Gems 缺陷的 Gems](#flawed-gems-缺陷的-gems)
+    * [Managing processes](#managing-processes)
+* [Testing Rails applications 测试 Rails 应用程序](#testing-rails-applications-测试-rails-应用程序)
+    * [Cucumber](#cucumber)
+    * [RSpec](#rspec)
+
 # 开发 Rails 应用程序
 
 ## Configuration 配置
 
-* 自定义的初始化代码放置在 `config/initializers`。`initializers` 中的代码会在程序启动的时候被执行。 
+* 自定义的初始化代码放置在 `config/initializers`。`initializers` 中的代码会在程序启动的时候被执行。
 * 每一个 gem 相关的初始化代码应当使用同样的名称，放在不同的文件里，如： `carrierwave.rb`, `active_admin.rb`, 等等。
 * 调整配置开发、测试及生产环境相应在 `config/environments/` 下对应的文件。
   * 标记额外的 assets 进行预编译(如果存在)：
@@ -115,7 +136,7 @@ Rails 是一个坚持己见的框架，而这也是一份坚持己见的指南�
 ## Models 模型
 
 * 自由的引用 non-ActiveRecord 类。
-* 模型需根据其意义命名（简短）且不带缩写的名字。 
+* 模型需根据其意义命名（简短）且不带缩写的名字。
 * 如果你需要 model 对象支持 ActiveRecord 行为比如 验证则使用 [ActiveAttr](https://github.com/cgriego/active_attr) gem。
 
     ```Ruby
@@ -243,7 +264,46 @@ Rails 是一个坚持己见的框架，而这也是一份坚持己见的指南�
 
 * 所有自定义的 validators 应放在一个共享的 gem 。
 * 多用 scopes。
-* 当一个由 `lambda` 及参数定义的作用域变得过于复杂时，更好的方式是建一个作为同样用途的类方法，并返回 `ActiveRecord::Relation` 对象。
+
+    ```Ruby
+    class User < ActiveRecord::Base
+      scope :active, -> { where(active: true) }
+      scope :inactive, -> { where(active: false) }
+
+      scope :with_orders, -> { joins(:orders).select('distinct(users.id)') }
+    end
+    ```
+* Wrap named scopes in `lambdas` to initialize them lazily.包裹命名的 scopes 到 `lambdas` 可以很偷懒的初始化它们。
+
+    ```Ruby
+    # bad
+    class User < ActiveRecord::Base
+      scope :active, where(active: true)
+      scope :inactive, where(active: false)
+
+      scope :with_orders, joins(:orders).select('distinct(users.id)')
+    end
+
+    # good
+    class User < ActiveRecord::Base
+      scope :active, -> { where(active: true) }
+      scope :inactive, -> { where(active: false) }
+
+      scope :with_orders, -> { joins(:orders).select('distinct(users.id)') }
+    end
+    ```
+
+* 当一个由 `lambda` 及参数定义的作用域变得过于复杂时，更好的方式是构建一个作为同样用途的类方法，并返回 `ActiveRecord::Relation` 对象。另一种有争论的做法是，你可以像下面这样定义相当简单的 scopes。
+
+
+    ```Ruby
+    class User < ActiveRecord::Base
+      def self.with_orders
+        joins(:orders).select('distinct(users.id)')
+      end
+    end
+    ```
+
 * 注意 `update_attribute` 方法的行为。它不运行模型验证（不同于 `update_attributes` ）并且可能把模型状态给搞砸。
 * 使用用户友好的网址。在网址显示具描述性的模型属性，而不只是 id 。
 有不止一种方法可以达成：
@@ -272,7 +332,7 @@ Rails 是一个坚持己见的框架，而这也是一份坚持己见的指南�
 
 ### ActiveResource
 
-* 当 `HTTP` 响应的是与现有不同的格式（XML 和 JSON）或者需要解析某些额外的格式，创建你自己的 format 并且在类中使用。定制的格式应该属于下面四类方法：`extension`， `mime_type`，`encode` 和 `decode`。
+* 当响应与现有不同的格式（XML 和 JSON）或者需要解析某些额外的格式，创建你自己的 format 并且在类中使用。定制的格式可以由下面四类方法实现：`extension`， `mime_type`，`encode` 和 `decode`。
 
     ```Ruby
     module ActiveResource
@@ -315,6 +375,11 @@ Rails 是一个坚持己见的框架，而这也是一份坚持己见的指南�
       ...
 
       def self.collection_path(prefix_options = {}, query_options = nil)
+        prefix_options, query_options = split_options(prefix_options) if query_options.nil?
+        "#{prefix(prefix_options)}#{collection_name}#{query_string(query_options)}"
+      end
+
+      def self.element_path(id, prefix_options = {}, query_options = nil)
         prefix_options, query_options = split_options(prefix_options) if query_options.nil?
         "#{prefix(prefix_options)}#{collection_name}/#{URI.parser.escape id.to_s}#{query_string(query_options)}"
       end
@@ -372,19 +437,18 @@ Rails 是一个坚持己见的框架，而这也是一份坚持己见的指南�
 * 不要在视图中构造复杂的格式，把它们输出到视图 `helper` 的一个方法或是模型。
 * 使用 `partial` 模版和布局来减少重复的代码
 * 加入 [client side validation](https://github.com/bcardarella/client_side_validations) 到定制的 validators。要做的步骤有：
-  * 声明一个继承 `ClientSideValidations::Middleware::Base` 的定制验证 
+  * 声明一个继承 `ClientSideValidations::Middleware::Base` 的定制验证
 
         ```Ruby
         module ClientSideValidations::Middleware
           class Email < Base
             def response
-              if request.params[:email] =~ /^([^@\s]+)@((?:[-a-z0-9]+[a-z]{2,}))$/i
-                  self.status = 200
-                else
-                  self.status = 404
-                end
-                super
+              if request.params[:email] =~ /^([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})$/i
+                self.status = 200
+              else
+                self.status = 404
               end
+              super
             end
           end
         end
@@ -436,10 +500,12 @@ Rails 是一个坚持己见的框架，而这也是一份坚持己见的指南�
 
 * 把共享的 localization 选项，像是日期及货币格式，放在 `locales` 的根目录下。
 * 使用缩写形式的 I18n 方法： `I18n.t` 代替 `I18n.translate` 以及 'I18n.l' 代替 'I18n.localize'。
+
     ```Ruby
     translate # Lookup text translations
     localize # Localize Date and Time objects to local formats
     ```
+
 * 使用 "lazy" 查询视图中使用的文字。假设我们有以下结构：
     ```
     en:
@@ -449,6 +515,7 @@ Rails 是一个坚持己见的框架，而这也是一份坚持己见的指南�
     ```
 
     `users.show.title` 这样的(locals)值能被 `app/views/users/show.html.haml` 以如下方式查询：
+
     ```Ruby
     = t '.title'
     ```
@@ -456,7 +523,7 @@ Rails 是一个坚持己见的框架，而这也是一份坚持己见的指南�
 * 在控制器以及模型中使用点分割的方式替代 `:scope` 选项。点分割形式的调用更加易读和追踪层级。
 
     ```Ruby
-    # use thsi call
+    # use this call
     I18n.t 'activerecord.errors.messages.record_invalid'
 
     # instead of this
@@ -596,7 +663,7 @@ The asset pipeline provides a framework to concatenate and minify or compress Ja
 * [haml-rails](https://github.com/indirect/haml-rails) - haml-rails 提供了 Haml 的 Rails 整合。
 * [haml](http://haml-lang.com) Haml 是一个简洁的模型语言，被很多人认为（包括我）远优于 Erb。
 * [kaminari](https://github.com/amatsuda/kaminari) - 很棒的分页解决方案。
-* [machinist](https://github.com/notahat/machinist) - Machinist makes it easy to create objects for use in tests. It generates data for the attributes you don't care about, and constructs any necessary associated objects, leaving you to specify only the fields you care about in your test. 
+* [machinist](https://github.com/notahat/machinist) - Machinist makes it easy to create objects for use in tests. It generates data for the attributes you don't care about, and constructs any necessary associated objects, leaving you to specify only the fields you care about in your test.
 * [rspec-rails](https://github.com/rspec/rspec-rails) - RSpec 是 Test::MiniTest 的取代者。我不高度推荐 RSpec。 rspec-rails 提供了 RSpec 的 Rails 整合。
 * [simple_form](https://github.com/plataformatec/simple_form) - 一旦用过 simple_form（或 formatastic），你就不想听到关于 Rails 缺省的表单。它是一个创造表单很棒的DSL。
 * [simplecov-rcov](https://github.com/fguillen/simplecov-rcov) - 为了 SimpleCov 打造的 RCov formatter。若你想使用 SimpleCov 搭配 Hudson 持续整合服务器，很有用。
@@ -611,9 +678,10 @@ The asset pipeline provides a framework to concatenate and minify or compress Ja
 
 这是一个有问题的或被别的 gem 取代的 gem 清单。你应该在你的项目里避免使用它们。
 
-* [rmagick](http://rmagick.rubyforge.org/) - 这个 gem 因大量消耗内存而声名狼藉。使用 minimagick 来取代。
-* [minimagick](https://github.com/probablycorey/mini_magick) - 自动测试的老解决方案。远不如 guard 及 [watchr](https://github.com/mynyml/watchr)。
-* [rcov](https://github.com/relevance/rcov) - 代码覆盖率工具，不兼容 Ruby 1.9。使用 SimpleCov 来取代。
+* [rmagick](http://rmagick.rubyforge.org/) - 这个 gem 因大量消耗内存而声名狼藉。使用 [minimagick](https://github.com/probablycorey/mini_magick) 来取代。
+* [autotest](http://www.zenspider.com/ZSS/Products/ZenTest/) - old solution for running tests automatically. Far
+inferior to guard and [watchr](https://github.com/mynyml/watchr).
+* [rcov](https://github.com/relevance/rcov) - 代码覆盖率工具，不兼容 Ruby 1.9。使用 [SimpleCov](https://github.com/colszowka/simplecov)  来取代。
 * [therubyracer](https://github.com/cowboyd/therubyracer) - 极度不鼓励在生产模式使用这个 gem，它消耗大量的内存。我会推荐使用 [Mustang](https://github.com/nu7hatch/mustang) 来取代。
 
 这仍是一个完善中的清单。请告诉我受人欢迎但有缺陷的 gems 。
@@ -624,7 +692,7 @@ The asset pipeline provides a framework to concatenate and minify or compress Ja
 
 # Testing Rails applications 测试 Rails 应用程序
 
-或许BDD是实现新特性的最好途径。你从写一些高阶的特性测试（通常使用Cucumber），然后使用这些测试来驱动特性的实现。首先你给特性的视图写 spec，并使用这些 spec 来创建相关的视图。之后，你为控制器创建 spec（其将会传递数据给视图）并且通过这些 spec 来实现控制器。最后你实现模型的测试以及模型自身。
+或许BDD是实现新特性的最好途径。你从写一些高阶的特性测试（通常使用Cucumber），然后使用这些测试来驱动特性的实现。首先你给特性的写 view spec，并通过这些 spec 来创建相关的视图。之后，你为 controller 创建 spec（其将会传递数据给视图）并且通过这些 spec 来实现控制器。最后你实现模型的 specs 以及模型自身。
 
 ## Cucumber
 
@@ -768,7 +836,7 @@ The asset pipeline provides a framework to concatenate and minify or compress Ja
 * 大量使用 `describe` 和 `context`
 * 按照如下地示例给 `describe` 区块命名：
   * 对于 non-methods 使用 "description"
-  * 实例方法使用 `#` "#method" 
+  * 实例方法使用 `#` "#method"
   * 类方法使用 `.` ".method"
 
     ```Ruby
@@ -821,7 +889,7 @@ The asset pipeline provides a framework to concatenate and minify or compress Ja
 * 使用 `let` 代码块替代 `before(:all)` 代码块来为 spec 例子创建数据。`let` 代码块更省事。
 
     ```Ruby
-    # use this 
+    # use this
     let(:article) { Fabricate(:article) }
 
     # ... instead of this:
@@ -880,9 +948,9 @@ The asset pipeline provides a framework to concatenate and minify or compress Ja
 
 ### Views 视图测试
 
-* view spec 的目录结构 `spec/views`要与 `app/views` 一致。例如，视图 `app/views/users`的 spec 例子被放在 `spec/views/users`。 
+* view spec 的目录结构 `spec/views`要与 `app/views` 一致。例如，视图 `app/views/users`的 spec 例子被放在 `spec/views/users`。
 * 视图的 specs 的命名惯例是添加 `_spec.rb` 至视图名字之后，举例来说，视图 `_form.html.haml` 有一个对应的测试叫做 `_form.html.haml_spec.rb`。
-* 每个视图测试文件都需要 `spec_helper.rb`。 
+* 每个视图测试文件都需要 `spec_helper.rb`。
 * 外部描述区块使用的是不含 `app/views` 部分的视图路径。在 `render` 方法没有传入参数时，是这么使用的。
 
     ```Ruby
@@ -1061,7 +1129,7 @@ The asset pipeline provides a framework to concatenate and minify or compress Ja
     end
     ```
 
-* 加入一个例子确保 fabricated的模型(对象)是有效的。 
+* 加入一个例子确保 fabricated的模型(对象)是有效的。
 
     ```Ruby
     describe Article
@@ -1191,6 +1259,15 @@ The asset pipeline provides a framework to concatenate and minify or compress Ja
 
     ```
 
+# Further Reading
+
+There are a few excellent resources on  style, that you should
+consider if you have time to spare:有一些优秀的 Rails 风格资源 ，如果你有空闲时间你应该考虑一下：
+
+* [The Rails 3 Way](http://tr3w.com/)
+* [Ruby on Rails Guides](http://guides.rubyonrails.org/)
+* [The RSpec Book](http://pragprog.com/book/achbd/the-rspec-book)
+
 # Contributing
 
 Nothing written in this guide is set in stone. It's my desire to work
@@ -1208,6 +1285,3 @@ doesn't know about its existence. Tweet about the guide, share it with
 your friends and colleagues. Every comment, suggestion or opinion we
 get makes the guide just a little bit better. And we want to have the
 best possible guide, don't we?
-
-
-

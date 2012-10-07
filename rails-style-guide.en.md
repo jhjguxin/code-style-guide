@@ -27,6 +27,25 @@ Some of the advice here is applicable only to Rails 3.1+.
 You can generate a PDF or an HTML copy of this guide using
 [Transmuter](https://github.com/TechnoGate/transmuter).
 
+# Table of Contents
+
+* [Developing Rails applications](#developing-rails-applications)
+    * [Configuration](#configuration)
+    * [Routing](#routing)
+    * [Controllers](#controllers)
+    * [Models](#models)
+    * [Migrations](#migrations)
+    * [Views](#views)
+    * [Assets](#assets)
+    * [Mailers](#mailers)
+    * [Bundler](#bundler)
+    * [Priceless Gems](#priceless-gems)
+    * [Flawed Gems](#flawed-gems)
+    * [Managing processes](#managing-processes)
+* [Testing Rails applications](#testing-rails-applications)
+    * [Cucumber](#cucumber)
+    * [RSpec](#rspec)
+
 # Developing Rails applications
 
 ## Configuration
@@ -229,15 +248,55 @@ create a custom validator file.
 
 * All custom validators should be moved to a shared gem.
 * Use named scopes freely.
-* When a named scope, defined with a lambda and parameters, becomes too
-complicated it is preferable to make a class method instead which serves
-the same purpose of the named scope and returns and
-`ActiveRecord::Relation` object.
+
+    ```Ruby
+    class User < ActiveRecord::Base
+      scope :active, -> { where(active: true) }
+      scope :inactive, -> { where(active: false) }
+
+      scope :with_orders, -> { joins(:orders).select('distinct(users.id)') }
+    end
+    ```
+
+* Wrap named scopes in `lambdas` to initialize them lazily.
+
+    ```Ruby
+    # bad
+    class User < ActiveRecord::Base
+      scope :active, where(active: true)
+      scope :inactive, where(active: false)
+
+      scope :with_orders, joins(:orders).select('distinct(users.id)')
+    end
+
+    # good
+    class User < ActiveRecord::Base
+      scope :active, -> { where(active: true) }
+      scope :inactive, -> { where(active: false) }
+
+      scope :with_orders, -> { joins(:orders).select('distinct(users.id)') }
+    end
+    ```
+
+* When a named scope defined with a lambda and parameters becomes too
+complicated, it is preferable to make a class method instead which serves
+the same purpose of the named scope and returns an
+`ActiveRecord::Relation` object. Arguably you can define even simpler
+scopes like this.
+
+    ```Ruby
+    class User < ActiveRecord::Base
+      def self.with_orders
+        joins(:orders).select('distinct(users.id)')
+      end
+    end
+    ```
+
 * Beware of the behavior of the `update_attribute` method. It doesn't
   run the model validations (unlike `update_attributes`) and could easily corrupt the model state.
 * Use user-friendly URLs. Show some descriptive attribute of the model in the URL rather than its `id`.
 There is more than one way to achieve this:
-  * Override the `to_param` method of the model. This method is used by Rails for constructing an URL to the object.
+  * Override the `to_param` method of the model. This method is used by Rails for constructing a URL to the object.
     The default implementation returns the `id` of the record as a String. It could be overridden to include another
     human-readable attribute.
 
@@ -248,8 +307,9 @@ There is more than one way to achieve this:
           end
         end
         ```
-        In order to convert this to a URL-friendly value, `parameterize` should be called on the string. The `id` of the
-        object needs to be at the beginning so that it could be found by the `find` method of ActiveRecord.
+
+    In order to convert this to a URL-friendly value, `parameterize` should be called on the string. The `id` of the
+    object needs to be at the beginning so that it can be found by the `find` method of ActiveRecord.
 
   * Use the `friendly_id` gem. It allows creation of human-readable URLs by using some descriptive attribute of the model instead of its `id`.
 
@@ -264,7 +324,7 @@ There is more than one way to achieve this:
 
 ### ActiveResource
 
-* When the response is in a format different then the existing ones (XML and
+* When the response is in a format different from the existing ones (XML and
 JSON) or some additional parsing of these formats is necessary,
 create your own custom format and use it in the class. The custom format
 should implement the following four methods: `extension`, `mime_type`,
@@ -333,7 +393,8 @@ extension part.
 * Use `rake db:schema:load` instead of `rake db:migrate` to initialize
 an empty database.
 * Use `rake db:test:prepare` to update the schema of the test database.
-* Avoid setting defaults in the tables themselves. Use the model layer
+* Avoid setting defaults in the tables themselves (unless the db is
+  shared between several applications). Use the model layer
   instead.
 
     ```Ruby
@@ -407,7 +468,7 @@ an empty database.
     `public/javascripts/rails.validations.custom.js.coffee` and add a
     reference to it in your `application.js.coffee` file:
 
-        ```Ruby
+        ```
         # app/assets/javascripts/application.js.coffee
         #= require rails.validations.custom
         ```
@@ -416,14 +477,13 @@ an empty database.
 
         ```Ruby
         #public/javascripts/rails.validations.custom.js.coffee
-        ClientSideValidations.validators.remote['email'] = (element, options) ->
+        clientSideValidations.validators.remote['email'] = (element, options) ->
           if $.ajax({
             url: '/validators/email.json',
             data: { email: element.val() },
             async: false
           }).status == 404
             return options.message || 'invalid e-mail format'
-          end
         ```
 
 ## Internationalization
@@ -706,7 +766,7 @@ compliant) that are useful in many Rails projects:
   considered by many far superior to HAML (not to mention Erb). The only thing
   stopping me from using Slim massively is the lack of good support in major
   editors/IDEs. Its performance is phenomenal.
-* [spork](https://github.com/timcharper/spork) - A DRb server for testing
+* [spork](https://github.com/sporkrb/spork) - A DRb server for testing
   frameworks (RSpec / Cucumber currently) that forks before each run to ensure
   a clean testing state. Simply put it preloads a lot of test environment and
   as consequence the startup time of your tests in greatly decreased. Absolute
@@ -971,7 +1031,7 @@ they will retry the match for given timeout allowing you to test ajax actions.
     article = mock_model(Article).as_null_object
     ```
 
-* Use `let` blocks instead of `before(:all)` blocks to create data for
+* Use `let` blocks instead of `before(:each)` blocks to create data for
   the spec examples. `let` blocks get lazily evaluated.
 
     ```Ruby
@@ -1105,12 +1165,12 @@ they will retry the match for given timeout allowing you to test ajax actions.
     = "Published at: #{formatted_date(@article.published_at)}"
 
     # spec/views/articles/show.html.haml_spec.rb
-    describe 'articles/show.html.html' do
+    describe 'articles/show.html.haml' do
       it 'displays the formatted date of article publishing'
         article = mock_model(Article, published_at: Date.new(2012, 01, 01))
         assign(:article, article)
 
-        template.stub(:formatted_date).with(article.published_at).and_return '01.01.2012'
+        template.stub(:formatted_date).with(article.published_at).and_return('01.01.2012')
 
         render
         rendered.should have_content('Published at: 01.01.2012')
@@ -1384,4 +1444,3 @@ doesn't know about its existence. Tweet about the guide, share it with
 your friends and colleagues. Every comment, suggestion or opinion we
 get makes the guide just a little bit better. And we want to have the
 best possible guide, don't we?
-
