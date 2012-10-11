@@ -1192,8 +1192,14 @@ pass parameters to their constructors, that is).不要想着使用文字而是�
 
     ```Ruby
     match = string[/regexp/]             # get content of matched regexp
+    match = "regexp"[/regexp/]           #=> "regexp"
     first_group = string[/text(grp)/, 1] # get content of captured group
+    first_group = 'textgrp'[/text(grp)/, 1] #=> 'grp'
+    first_group = 'text grp'[/text(grp)/, 1] #=> nil
     string[/text (grp)/, 1] = 'replace'  # string => 'text replace'
+    "text grp"[/text (grp)/, 1] = 'replace'  # string => 'text replace'
+    "text 1grp"[/text (grp)/, 1] = ' replace' if  "text 1grp"[/text (grp)/, 1].present?  #=> nil 
+
     ```
 
 * 当无需引用分组内容时, 应该使用(?:RE)代替(RE).
