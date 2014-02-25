@@ -48,7 +48,7 @@
 * [命名](#命名)
 * [注释](#注释)
     * [注解](#注解)
-* [类](#类)
+* [类与模块](#类与模块)
 * [异常](#异常)
 * [集合](#集合)
 * [字符串](#字符串)
@@ -1561,9 +1561,10 @@
 > 好的代码在于它有好的文档。当你打算添加一个注释，问问自己，“我该做的是怎样提高代码质量，那么这个注释是不是不需要了？”提高代码并且给他们添加文档使得它更加简洁。<br/>
 > -- Steve McConnell
 
-* 写出自解释文档代码，然后忽略不工作的这部分。这不是说着玩。
-* 注释长于一个单词则以大写开始并使用标点。使用一个空格将注释与符号隔开。Use [one
-  space](http://en.wikipedia.org/wiki/Sentence_spacing) after periods.
+* 写出自解释文档代码，然后让这部分歇息吧。这不是说着玩。
+* 使用英文编写注释。
+* 使用一个空格将注释与符号隔开。
+* 注释超过一个单词了，应句首大写并使用标点符号。句号后使用 [一个空格](http://en.wikipedia.org/wiki/Sentence_spacing)
 * 避免多余的注释。
 
     ```Ruby
@@ -1572,13 +1573,20 @@
     ```
 
 * 随时更新注释，没有注释比过期的注释更好。
+
+> Good code is like a good joke - it needs no explanation. <br/>
+> -- Russ Olsen
+
+* Avoid writing comments to explain bad code. Refactor the code to
+  make it self-explanatory. (Do or do not - there is no try. --Yoda)
+
 * 不要为糟糕的代码写注释。重构它们，使它们能够“自解释”。(Do or do not - there is no try.)
 
 ## 注解
 
 * 注解应该写在紧接相关代码的上方。
 * 注解关键字后跟一个冒号和空格，然后是描述问题的记录。
-* 如果需要多行来描述问题，随后的行需要在`#`后面缩进两个空格。
+* 如果需要多行来描述问题，随后的行需要在 `#` 后面缩进两个空格。
 
     ```Ruby
     def bar
@@ -1595,24 +1603,121 @@
     end
     ```
 
-* 使用`TODO`来备注缺失的特性或者在以后添加的功能。
-* 使用`FIXME`来备注有问题需要修复的代码。
-* 使用`OPTIMIZE`来备注慢的或者低效的可能引起性能问题的代码。
-* 使用`HACK`来备注那些使用问题代码的地方可能需要重构。
-* 使用`REVIEW`来备注那些需要反复查看确认工作正常的代码。例如：`REVIEW: 你确定客户端是怎样正确的完成 X 的吗？`
-* 使用其他自定义的关键字如果认为它是合适的，但是确保在你的项目的`README`或者类似的地方注明。
+* 使用 `TODO` 来备注缺失的特性或者在以后添加的功能。
+* 使用 `FIXME` 来备注有问题需要修复的代码。
+* 使用 `OPTIMIZE` 来备注慢的或者低效的可能引起性能问题的代码。
+* 使用 `HACK` 来备注那些使用问题代码的地方可能需要重构。
+* 使用 `REVIEW` 来备注那些需要反复查看确认工作正常的代码。例如： `REVIEW: 你确定客户端是怎样正确的完成 X 的吗？`
+* 使用其他自定义的关键字如果认为它是合适的，但是确保在你的项目的 `README` 或者类似的地方注明。
 
-## 类
+## 类与模块
 
-* 在设计类层次的时候确保他们符合[Liskov Substitution Principle](http://en.wikipedia.org/wiki/Liskov_substitution_principle)原则。(译者注: LSP原则大概含义为: 如果一个函数中引用了 `父类的实例`, 则一定可以使用其子类的实例替代, 并且函数的基本功能不变. (虽然功能允许被扩展))
+* 在 `class` 定义里使用一致的结构。
+
+    ```Ruby
+    class Person
+      # extend and include go first
+      extend SomeModule
+      include AnotherModule
+
+      # constants are next
+      SOME_CONSTANT = 20
+
+      # afterwards we have attribute macros
+      attr_reader :name
+
+      # followed by other macros (if any)
+      validates :name
+
+      # public class methods are next in line
+      def self.some_method
+      end
+
+      # followed by public instance methods
+      def some_method
+      end
+
+      # protected and private methods are grouped near the end
+      protected
+
+      def some_protected_method
+      end
+
+      private
+
+      def some_private_method
+      end
+    end
+    ```
+
+* 倾向使用 `module`，而不是只有类方法的 `class`。类别应该只在创建实例是合理的时候使用。
+
+    ```Ruby
+    # bad
+    class SomeClass
+      def self.some_method
+        # body omitted
+      end
+
+      def self.some_other_method
+      end
+    end
+
+    # good
+    module SomeClass
+      module_function
+
+      def some_method
+        # body omitted
+      end
+
+      def some_other_method
+      end
+    end
+    ```
+
+* 当你希望将模块的实例方法变成 `class` 方法时，偏爱使用 `module_function` 胜过 `extend self `。
+
+    ```Ruby
+    # bad
+    module Utilities
+      extend self
+
+      def parse_something(string)
+        # do stuff here
+      end
+
+      def other_utility_method(number, string)
+        # do some more stuff
+      end
+    end
+
+    # good
+    module Utilities
+      module_function
+
+      def parse_something(string)
+        # do stuff here
+      end
+
+      def other_utility_method(number, string)
+        # do some more stuff
+      end
+    end
+    ```
+
+* When designing class hierarchies make sure that they conform to the
+  [Liskov Substitution Principle](http://en.wikipedia.org/wiki/Liskov_substitution_principle).
+
+* 在设计类层次的时候确保他们符合 [Liskov Substitution Principle](http://en.wikipedia.org/wiki/Liskov_substitution_principle) 原则。(译者注: LSP原则大概含义为: 如果一个函数中引用了 `父类的实例`, 则一定可以使用其子类的实例替代, 并且函数的基本功能不变. (虽然功能允许被扩展))
 >Liskov替换原则：子类型必须能够替换它们的基类型 <br/>
 > 1. 如果每一个类型为T1的对象o1，都有类型为T2的对象o2，使得以T1定义的所有程序P在所有的对象o1都代换为o2时,程序P的行为没有变化，那么类型T2是类型T1的子类型。 <br/>
 > 2. 换言之，一个软件实体如果使用的是一个基类的话，那么一定适用于其子类，而且它根本不能察觉出基类对象和子类对象的区别。只有衍生类替换基类的同时软件实体的功能没有发生变化，基类才能真正被复用。 <br/>
 > 3. 里氏代换原则由Barbar Liskov(芭芭拉.里氏)提出，是继承复用的基石。 <br/>
 > 4. 一个继承是否符合里氏代换原则，可以判断该继承是否合理（是否隐藏有缺陷）。
 
-* 努力使你的类尽可能的健壮[SOLID](http://en.wikipedia.org/wiki/SOLID_(object-oriented_design\))。
-* 总是为你自己的类提供to_s方法, 用来表现这个类（实例）对象包含的对象.
+* 努力使你的类尽可能的健壮 [SOLID](http://en.wikipedia.org/wiki/SOLID_(object-oriented_design\))。
+* 总是为你自己的类提供 `to_s` 方法, 用来表现这个类（实例）对象包含的对象.
 
     ```Ruby
     class Person
@@ -1629,7 +1734,7 @@
     end
     ```
 
-* 使用`attr`功能功能成员来定义各个实例变量的访问器或者修改器方法。
+* 使用 `attr` 功能成员来定义各个实例变量的访问器或者修改器方法。
 
     ```Ruby
     # bad
@@ -1659,6 +1764,19 @@
     end
     ```
 
+* 避免使用 `attr`。使用 `attr_reader` 和 `attr_accessor` 作为替代。
+
+    ```Ruby
+    # bad - creates a single attribute accessor (deprecated in 1.9)
+    attr :something, true
+    attr :one, :two, :three # behaves as attr_reader
+
+    # good
+    attr_accessor :something
+    attr_reader :one, :two, :three
+    ```
+
+
 * 考虑使用 `Struct.new`, 它可以定义一些琐碎的 `accessors`,
 `constructor`（构造函数） 和 `comparison`（比较） 操作。
 
@@ -1678,7 +1796,28 @@
     end
     ````
 
-* 考虑添加工厂方法来提供灵活的方法来创建实际类实例。
+* 考虑使用 `Struct.new`，它替你定义了那些琐碎的存取器（accessors），构造器（constructor）以及比较操作符（comparison operators）。
+
+    ```Ruby
+    # good
+    class Person
+      attr_accessor :first_name, :last_name
+
+      def initialize(first_name, last_name)
+        @first_name = first_name
+        @last_name = last_name
+      end
+    end
+
+    # better
+    Person = Struct.new(:first_name, :last_name) do
+    end
+    ````
+
+* 不要去 `extend` 一个 `Struct.new` - 它已经是一个新的 `class`。扩展它会产生一个多余的 `class` 层级
+  并且可能会产生怪异的错误如果文件被加载多次。
+
+* 考虑添加工厂方法来提供灵活的方法来创建特定类实例。
 
     ```Ruby
     class Person
@@ -1726,6 +1865,8 @@
     end
     ```
 
+* Avoid the usage of class (`@@`) variables due to their "nasty" behavior
+in inheritance.
 * 避免使用类变量（`@@`）因为他们讨厌的继承习惯（在子类中也可以修改父类的类变量）。
 
     ```Ruby
@@ -1756,7 +1897,12 @@
       end
 
       private
+
       def private_method
+        # ...
+      end
+
+      def another_private_method
         # ...
       end
     end
@@ -1773,10 +1919,11 @@
 
       # good
       def self.some_other_method
-        # body ommited
+        # body omitted
       end
 
-      # 也可以这样方便的定义多个单例方法。
+      # Also possible and convenient when you
+      # have to define many singleton methods.
       class << self
         def first_method
           # body omitted
@@ -1812,11 +1959,34 @@
 
     ```Ruby
     begin
-      fail 'Oops';
+      fail 'Oops'
     rescue => error
       raise if error.message != 'Oops'
     end
     ```
+
+* 不要为 `fail/raise` 指定准确的 `RuntimeError`。
+
+    ```Ruby
+    # bad
+    fail RuntimeError, 'message'
+
+    # good - signals a RuntimeError by default
+    fail 'message'
+    ```
+
+* 宁愿提供一个异常类和一条消息作为 `fail/raise` 的两个参数，而不是一个异常实例。
+
+    ```Ruby
+    # bad
+    fail SomeException.new('message')
+    # Note that there is no way to do `fail SomeException.new('message'), backtrace`.
+
+    # good
+    fail SomeException, 'message'
+    # Consistent with `fail SomeException, 'message', backtrace`.
+    ```
+
 * Never return from an `ensure` block. If you explicitly return from a
   method inside an `ensure` block, the return will take precedence over
   any exception being raised, and the method will return as if no
@@ -1834,7 +2004,7 @@
     end
     ```
 
-* Use *implicit begin blocks* when possible.使用**隐式 `begin` 代码块**如果可能。
+* Use **implicit begin blocks** when possible.如果可能使用**隐式 `begin` 代码块**。
 
     ```Ruby
     # bad
@@ -1852,10 +2022,9 @@
     rescue
       # failure handling goes here
     end
+    ```
 
-* Mitigate the proliferation of `begin` blocks by using
-  *contingency methods* (a term coined by Avdi Grimm).
-  减少 `begin` 代码块的扩增通过一些 *contingency methods* 偶然性方法。
+* 通过 *contingency methods* 偶然性方法。 (一个由 Avdi Grimm 创造的词) 来减少 `begin` 区块的使用。
 
     ```Ruby
     # bad
@@ -1890,13 +2059,26 @@
     begin
       # an exception occurs here
     rescue SomeError
-      # the rescue clause does absolutely nothing还没有补救代码
+      # the rescue clause does absolutely nothing
     end
 
     # bad
     do_something rescue nil
     ```
 
+* 避免使用 `rescue` 的修饰符形式。
+
+    ```Ruby
+    # bad - this catches exceptions of StandardError class and its descendant classes
+    read_file rescue handle_error($!)
+
+    # good - this catches only the exceptions of Errno::ENOENT class and its descendant classes
+    def foo
+      read_file
+    rescue Errno::ENOENT => ex
+      handle_error(ex)
+    end
+    ```
 
 * 不要用异常来控制流。
 
@@ -1916,7 +2098,7 @@
     end
     ```
 
-* 应该总是避免拦截(最顶级的)Exception异常类。这里(ruby自身)将会捕获信号并且调用 `exit`，需要你使用 `kill -9` 杀掉进程。
+* 应该总是避免拦截(最顶级的) `Exception` 异常类。这里(ruby自身)将会捕获信号并且调用 `exit`，需要你使用 `kill -9` 杀掉进程。
 
     ```Ruby
     # bad
@@ -1946,7 +2128,7 @@
 
     ```
 
-* 将更具体的异常放在拦截链的上方，否则他们将不会被捕获。
+* 将更具体的异常放在救援（rescue）链的上方，否则他们将不会被救援。
 
     ```Ruby
     # bad
@@ -1968,10 +2150,12 @@
     end
     ```
 
-* 使用 `ensure` 语句, 来确保总是执行一些特地的操作.
+* Release external resources obtained by your program in an ensure
+block.
+  在 `ensure` 区块中释放你程式获得的外部资源。
 
     ```Ruby
-    f = File.open("testfile")
+    f = File.open('testfile')
     begin
       # .. process
     rescue
@@ -1981,12 +2165,13 @@
     end
     ```
 
-* 除非必要, 尽可能使用Ruby标准库中异常类，而不是引入一个新的异常类。(而不是派生自己的异常类)
+
+* 除非必要, 尽可能使用 Ruby 标准库中异常类，而不是引入一个新的异常类。(而不是派生自己的异常类)
 
 ## 集合
 
 * Prefer literal array and hash creation notation (unless you need to
-pass parameters to their constructors, that is).不要想着使用文字而是使用创建符号来定义数组和哈希字典(除非你需要传递参数到它们的构造函数中)。
+pass parameters to their constructors, that is).倾向数组及哈希的字面表示法(除非你需要传递参数到它们的构造函数中)。
 
     ```Ruby
     # bad
@@ -1998,7 +2183,7 @@ pass parameters to their constructors, that is).不要想着使用文字而是�
     hash = {}
     ```
 
-* 总是使用 `%w` 的方式来定义字符串数组.(译者注: w表示英文单词word, 而且定义之间千万不能有逗号)
+* 当你需要元素为单词（没有空格和特殊符号）的数组的时候总是使用 `%w` 的方式来定义字符串数组。应用这条规则仅仅在两个或多个数组。
 
     ```Ruby
     # bad
@@ -2008,12 +2193,43 @@ pass parameters to their constructors, that is).不要想着使用文字而是�
     STATES = %w(draft open closed)
     ```
 
-* 避免直接引用靠后的数组元素, 这样隐式的之前的元素都被赋值为nil.
+* 当你需要一个符号的数组（并且不需要保持 Ruby 1.9 兼容性）时，使用 `%i`。仅当数组只有两个及以上元素时才应用这个规则。
+
+    ```Ruby
+    # bad
+    STATES = [:draft, :open, :closed]
+
+    # good
+    STATES = %i(draft open closed)
+    ```
+
+* Avoid comma after the last item of an `Array` or `Hash` literal, especially
+  when the items are not on separate lines.
+  避免在 `Array` 或者 `Hash` 的最后一项后面出现逗号，特别是当这些条目不在一行。
+
+    ```Ruby
+    # bad - easier to move/add/remove items, but still not preferred
+    VALUES = [
+               1001,
+               2020,
+               3333,
+             ]
+
+    # bad
+    VALUES = [1001, 2020, 3333, ]
+
+    # good
+    VALUES = [1001, 2020, 3333]
+    ```
+
+* 避免在数组中创造巨大的间隔。
 
     ```Ruby
     arr = []
     arr[100] = 1 # now you have an array with lots of nils
     ```
+
+* 当访问一个数组的第一个或者最后一个元素，倾向使用 `first` 或 `last` 而不是 `[0]` 或 `[-1]`。
 
 * 如果要确保元素唯一, 则使用 `Set` 代替 `Array` .`Set` 更适合于无顺序的, 并且元素唯一的集合, 集合具有类似于数组一致性操作以及哈希的快速查找.
 
@@ -2028,7 +2244,7 @@ pass parameters to their constructors, that is).不要想着使用文字而是�
     ```
 
 * 避免使用易变对象作为哈希键。
-* 优先使用1.9的新哈希语法当你的哈希键是符号。
+* 优先使用 1.9 的新哈希语法当你的哈希键是符号。
 
     ```Ruby
     # bad
@@ -2038,7 +2254,84 @@ pass parameters to their constructors, that is).不要想着使用文字而是�
     hash = { one: 1, two: 2, three: 3 }
     ```
 
-* 记住, 在Ruby1.9中, 哈希的表现不再是无序的. (译者注: Ruby1.9将会记住元素插入的序列)
+* Don't mix the Ruby 1.9 hash syntax with hash rockets in the same
+hash literal. When you've got keys that are not symbols stick to the
+hash rockets syntax.
+  在相同的 hash 字面量中不要混合 Ruby 1.9 hash 语法和箭头形式的 hash。当你
+  得到的 keys 不是符号的时候转换为箭头形式的语法。
+
+    ```Ruby
+    # bad
+    { a: 1, 'b' => 2 }
+
+    # good
+    { :a => 1, 'b' => 2 }
+
+* Use `Hash#key?` instead of `Hash#has_key?` and `Hash#value?` instead
+  of `Hash#has_value?`. As noted
+  [here](http://blade.nagaokaut.ac.jp/cgi-bin/scat.rb/ruby/ruby-core/43765)
+  by Matz, the longer forms are considered deprecated.
+  用 `Hash#key?` 不用 `Hash#has_key?` 以及用 `Hash#value?`, 不用 `Hash#has_value?` Matz [提到过](http://blade.nagaokaut.ac.jp/cgi-bin/scat.rb/ruby/ruby-core/43765) 长的形式在考虑被弃用。
+
+    ```Ruby
+    # bad
+    hash.has_key?(:test)
+    hash.has_value?(value)
+
+    # good
+    hash.key?(:test)
+    hash.value?(value)
+    ```
+
+* 在处理应该存在的哈希键时，使用 `fetch`。
+
+    ```Ruby
+    heroes = { batman: 'Bruce Wayne', superman: 'Clark Kent' }
+    # bad - if we make a mistake we might not spot it right away
+    heroes[:batman] # => "Bruce Wayne"
+    heroes[:supermann] # => nil
+
+    # good - fetch raises a KeyError making the problem obvious
+    heroes.fetch(:supermann)
+    ```
+
+* 在使用 `fetch` 时，使用第二个参数设置默认值而不是使用自定义的逻辑。
+
+   ```Ruby
+   batman = { name: 'Bruce Wayne', is_evil: false }
+
+   # bad - if we just use || operator with falsy value we won't get the expected result
+   batman[:is_evil] || true # => true
+
+   # good - fetch work correctly with falsy values
+   batman.fetch(:is_evil, true) # => false
+   ```
+
+* 尽量用 `fetch` 加区块而不是直接设定默认值。
+
+   ```Ruby
+   batman = { name: 'Bruce Wayne' }
+
+   # bad - if we use the default value, we eager evaluate it
+   # so it can slow the program down if done multiple times
+   batman.fetch(:powers, get_batman_powers) # get_batman_powers is an expensive call
+
+   # good - blocks are lazy evaluated, so only triggered in case of KeyError exception
+   batman.fetch(:powers) { get_batman_powers }
+   ```
+
+* 当你需要从一个 hash 连续的取回一系列的值的时候使用 `Hash#values_at`。
+
+    ```Ruby
+    # bad
+    email = data['email']
+    nickname = data['nickname']
+
+    # good
+    email, username = data.values_at('email', 'nickname')
+    ```
+
+* 记住, 在 Ruby1.9 中, 哈希的表现不再是无序的. (译者注: Ruby1.9 将会记住元素插入的序列)
 * 当遍历一个集合的同时, 不要修改这个集合。
 
 ## 字符串
@@ -2051,6 +2344,9 @@ pass parameters to their constructors, that is).不要想着使用文字而是�
 
     # good
     email_with_name = "#{user.name} <#{user.email}>"
+
+    # good
+    email_with_name = format('%s <%s>', user.name, user.email)
     ```
 
 * Consider padding string interpolation code with space. It more clearly sets the
@@ -2060,17 +2356,55 @@ pass parameters to their constructors, that is).不要想着使用文字而是�
     "#{ user.last_name }, #{ user.first_name }"
     ```
 
-* 当不需要使用 `字符串插值` 或某些特殊字符如 `\t`、 `\n`、`'`、等, 应该优先使用单引号.
+* Consider padding string interpolation code with space. It more clearly sets the
+  code apart from the string.
+  考虑替字符串插值留白。這使插值在字符串里看起來更清楚。
+
+    ```Ruby
+    "#{ user.last_name }, #{ user.first_name }"
+    ```
+
+* 采用一致的字符串字面量引用风格。这里有在社区里面受欢迎的两种风格，它们都被认为非常好 -
+  默认使用单引号（选项 A）以及双引号风格（选项 B）。
+
+    * **(Option A)** 当你不需要字符串插值或者例如 `\t`， `\n`， `'` 这样的特殊符号的
+      时候优先使用单引号引用。
+
+        ```Ruby
+        # bad
+        name = "Bozhidar"
+
+        # good
+        name = 'Bozhidar'
+        ```
+
+    * **(Option B)** Prefer double-quotes unless your string literal
+      contains `"` or escape characters you want to suppress.
+      除非你的字符串字面量包含 `"` 或者你需要抑制转义字符（escape characters）
+      优先使用双引号引用。
+
+        ```Ruby
+        # bad
+        name = 'Bozhidar'
+
+        # good
+        name = "Bozhidar"
+        ```
+
+    第二种风格可以说在 Ruby 社区更受欢迎些。该指南的字符串字面量，无论如何，
+    与第一种风格对齐。
+
+* 不要使用 `?x` 符号字面量语法。从 Ruby 1.9 开始基本上它是多余的，`?x` 将会被解释为 `x` （只包括一个字符的字符串）。
 
     ```Ruby
     # bad
-    name = "Bozhidar"
+    char = ?c
 
     # good
-    name = 'Bozhidar'
+    char = 'c'
     ```
 
-* 当使用字符串插值替换 `实例变量` 时, 应该省略{}.
+* 别忘了使用 `{}` 来围绕被插入字符串的实例与全局变量。
 
     ```Ruby
     class Person
@@ -2081,19 +2415,36 @@ pass parameters to their constructors, that is).不要想着使用文字而是�
         @last_name = last_name
       end
 
-      # bad
+      # bad - valid, but awkward
       def to_s
-        "#{@first_name} #{@last_name}"
+        "#@first_name #@last_name"
       end
 
       # good
       def to_s
-        "#@first_name #@last_name"
+        "#{@first_name} #{@last_name}"
       end
     end
+
+    $global = 0
+    # bad
+    puts "$global = #$global"
+
+    # good
+    puts "$global = #{$global}"
     ```
 
-* 操作较大的字符串时, 避免使用 `String#+` , 如果需要修改被操作字符串, 应该总是使用 `String#<<` 作为代替。就地并列字符串实例变体比 `String#+` 更快，它创建了多个字符串对象。
+* 在对象插值的时候不要使用 `Object#to_s`，它将会被自动调用。
+
+    ```Ruby
+    # bad
+    message = "This is the #{result.to_s}."
+
+    # good
+    message = "This is the #{result}."
+    ```
+
+* 操作较大的字符串时, 避免使用 `String#+` 做为替代使用 `String#<<`。就地级联字符串块总是比 `String#+` 更快，它创建了多个字符串对象。
 
     ```Ruby
     # good and also fast
@@ -2105,10 +2456,30 @@ pass parameters to their constructors, that is).不要想着使用文字而是�
     end
     ```
 
+* When using heredocs for multi-line strings keep in mind the fact
+  that they preserve leading whitespace. It's a good practice to
+  employ some margin based on which to trim the excessive whitespace.
+  heredocs 中的多行文字会保留前缀空白。因此做好如何缩进的规划。这是一个很好的
+  做法，采用一定的边幅在此基础上削减过多的空白。
+
+    ```Ruby
+    code = <<-END.gsub(/^\s+\|/, '')
+      |def test
+      |  some_method
+      |  other_method
+      |end
+    END
+    #=> "def test\n  some_method\n  other_method\nend\n"
+    ```
+
+
 ## 正则表达式
 
-* 如果只是需要中查找字符串的 `text`, 不要使用正则表达式：`string['text']`
+> Some people, when confronted with a problem, think
+> "I know, I'll use regular expressions." Now they have two problems.<br/>
+> -- Jamie Zawinski
 
+* 如果只是需要中查找字符串的 `text`, 不要使用正则表达式：`string['text']`
 * 针对简单的结构, 你可以直接使用string[/RE/]的方式来查询.
 
     ```Ruby
@@ -2117,20 +2488,33 @@ pass parameters to their constructors, that is).不要想着使用文字而是�
     string[/text (grp)/, 1] = 'replace'  # string => 'text replace'
     ```
 
-* 当无需引用分组内容时, 应该使用(?:RE)代替(RE).
+* 当你不需要替结果分组时，使用非分组的群组。
 
     ```Ruby
     /(first|second)/   # bad
     /(?:first|second)/ # good
     ```
 
-* 避免使用 `$1-$9` 风格的分组引用, 而应该使用1.9新增的命名分组来代替.
+* 不要使用 Perl 遗风的变量来表示匹配的正则分组（如 `$1`，`$2` 等），使用 `Regexp.last_match[n]` 作为替代。
+
+    ```Ruby
+    /(regexp)/ =~ string
+    ...
+
+    # bad
+    process $1
+
+    # good
+    process Regexp.last_match[1]
+    ```
+
+* 避免使用数字化命名分组很难明白他们代表的意思。命名群组来替代。
 
     ```Ruby
     # bad
     /(regexp)/ =~ string
     ...
-    process $1
+    process Regexp.last_match[1]
 
     # good
     /(?<meaningful_var>regexp)/ =~ string
@@ -2138,7 +2522,7 @@ pass parameters to their constructors, that is).不要想着使用文字而是�
     process meaningful_var
     ```
 
-* 字符类有以下几个特殊关键字值得注意: `^`, `-`, `\`, `]`, 所以, 不要转义 `.` 和 `[]` 中的括号, 他们是正常字符.
+* 字符类有以下几个特殊关键字值得注意: `^`, `-`, `\`, `]`, 所以, 不要转义 `.` 或者 `[]` 中的括号。
 
 * 注意, `^` 和 `$` , 他们匹配行首和行尾, 而不是一个字符串的结尾, 如果你想匹配整个字符串, 用 `\A` 和 `\Z`。
 
@@ -2148,8 +2532,7 @@ pass parameters to their constructors, that is).不要想着使用文字而是�
     string[/\Ausername\Z/] # don't match
     ```
 
-* 使用 `x` 修饰符来匹配复杂的表达式, 这将使得RE更具可读性, 你可以添加一些有用的注释.
-注意, 所有空格将被忽略.
+* 针对复杂的正则表达式，使用 x 修饰符。可提高可读性并可以加入有用的注释。只是要注意空白字符会被忽略。
 
     ```Ruby
     regexp = %r{
@@ -2161,32 +2544,28 @@ pass parameters to their constructors, that is).不要想着使用文字而是�
     }x
     ```
 
-*  `sub`/`gsub`也支持哈希以及代码块形式语法, 可用于复杂情形下的替换操作.
+*  `sub`/`gsub` 也支持哈希以及代码块形式语法, 可用于复杂情形下的替换操作.
 
 ## 百分号和字面值
 
-* 多用 `%w`
+* Use `%()`(it's a shorthand for `%Q`) for single-line strings which require both interpolation
+  and embedded double-quotes. For multi-line strings, prefer heredocs.
+  需要插值与嵌入双引号的单行字符串使用 `%()` （是 `%Q` 的简写）。多行字符串，最好用 heredocs 。
 
     ```Ruby
-    STATES = %w(draft open closed)
-    ```
-
-* 定义需要插值和嵌套双引号符号的单行字符串，使用 `%()` 的方式.而多行字符串, 尽量使用 heredocs 格式.
-
-    ```Ruby
-    # bad (不需要插值)
+    # bad (no interpolation needed)
     %(<div class="text">Some text</div>)
-    # should be '<div class="text">Some text</div>' # 应该这样写
+    # should be '<div class="text">Some text</div>'
 
-    # bad (没有双引号)
+    # bad (no double-quotes)
     %(This is #{quality} style)
-    # should be "This is #{quality} style" # 应该这样写
+    # should be "This is #{quality} style"
 
     # bad (multiple lines)
     %(<div>\n<span class="big">#{exclamation}</span>\n</div>)
     # should be a heredoc.
 
-    # good (插值, 引号, 单行)
+    # good (requires interpolation, has quotes, single line)
     %(<tr><td class="name">#{name}</td>)
     ```
 
@@ -2234,6 +2613,24 @@ There's a line-oriente form of the string literals that is usually called as `he
       end
     ```
 
+* Avoid `%q` unless you have a string with both `'` and `"` in
+  it. Regular string literals are more readable and should be
+  preferred unless a lot of characters would have to be escaped in
+  them.
+  没有 `'` 和 `"` 的字符串不要使用 `%q` 。除非许多字符需要转义，否则普通字符串可读性更好。
+
+    ```Ruby
+    # bad
+    name = %q(Bruce Wayne)
+    time = %q(8 o'clock)
+    question = %q("What did you say?")
+
+    # good
+    name = 'Bruce Wayne'
+    time = "8 o'clock"
+    question = '"What did you say?"'
+    ```
+
 * `%r` 的方式只适合于定义包含多个 `/` 符号的正则表达式。
 
     ```Ruby
@@ -2263,15 +2660,43 @@ There's a line-oriente form of the string literals that is usually called as `he
     => "/blog/2011/tmp/asdfas.64"
     ```
 
-* 避免使用`%q`，`%Q`， `%x`， `%s`,和 `%W`
+* 除非调用的命令中用到了反引号（这种情况不常见），否则不要用 `%x`。
 
-* 优先使用()作为%类语法格式的分隔符.(译者注, 本人很喜欢 `%(...)`, 不过Programming Ruby中, 显然更喜欢使用%{}的方式)
+    ```Ruby
+    # bad
+    date = %x(date)
+
+    # good
+    date = `date`
+    echo = %x(echo `date`)
+    ```
+
+* Avoid the use of `%s`. It seems that the community has decided
+  `:"some string"` is the preferred way to create a symbol with
+  spaces in it.
+  不要用 `%s` 。社区倾向使用 `:"some string"` 来创建含有空白的符号。
+
+* Prefer `()` as delimiters for all `%` literals, except `%r`. Since
+  braces often appear inside regular expressions in many scenarios a
+  less common character like `{` might be a better choice for a
+  delimiter, depending on the regexp's content.
+  用 `%` 表示字面量时使用 `()`， `%r` 除外。因为大括号经常出现在正则表达式在很多场景中在很多场景中不太通用的字符例如 `{` 作为分割符可能是一个更好的选择，取决于正则式的内容。
+
+    ```Ruby
+    # bad
+    %w[one two three]
+    %q{"Test's king!", John said.}
+
+    # good
+    %w(one two three)
+    %q("Test's king!", John said.)
+    ```
 
 ## 元编程
 
 * Avoid needless metaprogramming.避免无限循环的元编程。
 
-* 在编写库时，不要乱动核心库。（不要画蛇添足）
+* 写一个函数库时不要使核心类混乱（不要使用 monkey patch）。
 
 * The block form of `class_eval` is preferable to the string-interpolated form. `class_eval` 代码块形式最好用于字符串插值形式。
   - when you use the string-interpolated form, always supply `__FILE__` and `__LINE__`, so that your backtraces make sense:当你使用字符串插值形式，总是提供 `__FILE__` 和 `__LINE__`，使得你的回溯有意义。
@@ -2282,7 +2707,7 @@ There's a line-oriente form of the string literals that is usually called as `he
 
   - `define_method` 最好用 `class_eval{ def ... }`
 
-* When using `class_eval` (or other `eval`) with string interpolation, add a comment block showing its appearance if interpolated (a practice I learned from the rails code):当使用 `class_eval` (或者其他的 `eval`)以及字符串插值，添加一个注释块使之在插入的时候现实(这是我从 rails 代码学来的实践)：
+* When using `class_eval` (or other `eval`) with string interpolation, add a comment block showing its appearance if interpolated (a practice I learned from the rails code):当使用 `class_eval` (或者其他的 `eval`)以及字符串插值，添加一个注释块使之在插入的时候显示(这是我从 rails 代码学来的实践)：
 
     ```ruby
     # from activesupport/lib/active_support/core_ext/string/output_safety.rb
@@ -2302,12 +2727,16 @@ There's a line-oriente form of the string literals that is usually called as `he
     end
     ```
 
-* avoid using `method_missing` for metaprogramming. Backtraces become messy; the behavior is not listed in `#methods`; misspelled method calls might silently work (`nukes.launch_state = false`). Consider using delegation, proxy, or `define_method` instead.  If you must, use `method_missing`,
-* 避免在元编程中使用 `method_missing`，它使得回溯变得很麻烦，这个习惯不被列在 `#methods`，拼写错误的方法可能也在默默的工作 (`nukes.launch_state = false`)。考虑使用委托，代理或者是 `define_method` ，如果必须这样，使用 `method_missing` ，
+* avoid using `method_missing` for metaprogramming. Backtraces become messy; the behavior is not listed in `#methods`; misspelled method calls might silently work, e.g. `nukes.launch_state = false`. Consider using delegation, proxy, or `define_method` instead. If you must use `method_missing`:
   - be sure to [also define `respond_to_missing?`](http://blog.marc-andre.ca/2010/11/methodmissing-politely.html)
   - only catch methods with a well-defined prefix, such as `find_by_*` -- make your code as assertive as possible.
   - call `super` at the end of your statement
   - delegate to assertive, non-magical methods:
+* 避免在元编程中使用 `method_missing`，它使得回溯变得很麻烦，这个习惯不被列在 `#methods`，拼写错误的方法可能也在默默的工作，例如 `nukes.launch_state = false`。考虑使用委托，代理或者是 `define_method` ，如果必须这样，使用 `method_missing` ，
+  - 确保 [也定义了 `respond_to_missing?`](http://blog.marc-andre.ca/2010/11/methodmissing-politely.html)
+  - 仅捕捉字首定义良好的方法，像是 find_by_* ― 让你的代码越肯定（assertive）越好。
+  - 在语句的最后调用 super
+  - delegate 到确定的、非魔法方法中:
 
     ```ruby
     # bad
@@ -2333,9 +2762,9 @@ There's a line-oriente form of the string literals that is usually called as `he
 
 ## 杂项
 
-* 总是打开Ruby -w开关。
-* 通常情况下, 尽量避免使用哈希作为方法的 `optional` 参数. (此时应该考虑这个方法是不是功能太多?)
-* 避免一个方法内容超过10行代码, 理想情况下, 大多数方法内容应该少于5行.(不算空行)
+* 总是打开 `ruby -w` 开关。
+* 避免使用哈希作为可选参数。这个方法是不是做太多事了？（对象初始器是本规则的例外）
+* 避免一个方法内容超过 10 行代码, 理想情况下, 大多数方法内容应该少于5行。空行不算进 LOC 里。
 * 尽量避免方法的参数超过三或四个.
 * 有时候, 必须用到全局方法, 应该增加这些方法到 Kernel 模块，并设置他们可见性关键字为 `private`。
 * 尽可能使用类实例变量代替全局变量. (译者注:是类实例变量, 而不是类的实例变量. 汗~~)
@@ -2355,13 +2784,25 @@ There's a line-oriente form of the string literals that is usually called as `he
     ```
 
 * 能够用 `alias_method` 就不要用 `alias`。
-* 使用 `OptionParser` 来解析复杂的命令行选项， 较简单的命令行， `-s` 参数即可。
+* 使用 `OptionParser` 来解析复杂的命令行选项， 琐碎的的命令行，`ruby -s` 参数即可。
+* 优先 `Time.now` 于 `Time.new` 当检索当前的系统时间。
 * 按照功能来编写方法, 当方法名有意义时, 应该避免方法功能被随意的改变。
-* 避免不需要的元编程。
 * 除非必要, 避免更改已经定义的方法的参数。
 * 避免超过三级的代码块嵌套。
 * 应该持续性的遵守以上指导方针。
 * 多使用（生活）常识。
+
+## 工具
+
+以下是一些工具，让你自动检查 Ruby 代码是否符合本指南。
+
+### RuboCop
+
+[RuboCop](https://github.com/bbatsov/rubocop) 是一个基于本指南的 Ruby 代码风格检查工具。 RuboCop 涵盖了本指南相当大的部分，支持 MRI 1.9 和 MRI 2.0，而且与 Emacs 整合良好。
+
+### RubyMine
+
+[RubyMine](http://www.jetbrains.com/ruby/) 的代码检查是 [部分基于](http://confluence.jetbrains.com/display/RUBYDEV/RubyMine+Inspections) 本指南的。
 
 # Contributing
 
@@ -2373,6 +2814,15 @@ community.
 Feel free to open tickets or send pull requests with improvements. Thanks in
 advance for your help!
 
+## How to Contribute?
+
+It's easy, just follow the [contribution guidelines](https://github.com/bbatsov/ruby-style-guide/blob/master/CONTRIBUTING.md).
+
+# License
+
+![Creative Commons License](http://i.creativecommons.org/l/by/3.0/88x31.png)
+This work is licensed under a [Creative Commons Attribution 3.0 Unported License](http://creativecommons.org/licenses/by/3.0/deed.en_US)
+
 # Spread the Word
 
 A community-driven style guide is of little use to a community that
@@ -2380,3 +2830,6 @@ doesn't know about its existence. Tweet about the guide, share it with
 your friends and colleagues. Every comment, suggestion or opinion we
 get makes the guide just a little bit better. And we want to have the
 best possible guide, don't we?
+
+Cheers,<br/>
+[Bozhidar](https://twitter.com/bbatsov)
