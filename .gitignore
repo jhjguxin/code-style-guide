@@ -1,3 +1,7 @@
+#ls *~
+#ls */*/*~
+# ignore vim swp files and gedit temp files
 *~
-**/*~
-**/**/*~
+*.swp
+*.*~
+.vim
